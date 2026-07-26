@@ -16,6 +16,12 @@ st.markdown("""
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
+        /* 針對手機版額外隱藏右下角浮動標誌與工具列 */
+        .stDeployButton {display:none;}
+        [data-testid="stStatusWidget"] {visibility: hidden;}
+        footer.st-emotion-cache-12w0qpk {display: none;}
+        div[data-testid="stToolbar"] {visibility: hidden;}
+        
         .stApp {
             background-color: #1f1a14;
         }
