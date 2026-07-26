@@ -4,7 +4,7 @@ import pandas as pd
 # 1. 頁面基本設定
 st.set_page_config(
     page_title="鋼鐵柚子戰情室",
-    page_icon="柚",
+    page_icon="🍐",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -112,7 +112,13 @@ if not df_status.empty and len(df_status.columns) >= 2:
 
 # 建立市場收盤價對應字典 (代號 -> 收盤價)
 price_dict = {}
+latest_market_date = "2026-07-27"  # 預設備用日期
+
 if not df_market.empty:
+    # 自動抓取 Quotes 表最後一列（或最新一筆）的日期作為同步時間
+    last_row = df_market.iloc[-1]
+    latest_market_date = str(last_row.get('日期', last_row.iloc[0] if len(last_row) > 0 else "2026-07-27"))
+    
     for _, row in df_market.iterrows():
         sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip()
         prc = row.get('收盤價', row.iloc[3] if len(row) > 3 else 0)
@@ -121,9 +127,7 @@ if not df_market.empty:
         except:
             pass
 
-last_sync_time = status_dict.get('最後更新時間', '2026-07-27 17:05:00')
-
-# 獨立頂部標題區塊
+# 獨立頂部標題區塊（直接顯示 Quotes 的最新日期）
 st.markdown(f"""
     <div class="fixed-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -133,7 +137,7 @@ st.markdown(f"""
             </div>
             <div style="text-align: right;">
                 <span style="display: inline-block; width: 8px; height: 8px; background-color: #556B2F; border-radius: 50%;"></span>
-                <div style="font-size: 9px; font-family: monospace; color: #1f1a14; font-weight: bold; margin-top: 2px;">{str(last_sync_time).split(" ")[-1]}</div>
+                <div style="font-size: 9px; font-family: monospace; color: #1f1a14; font-weight: bold; margin-top: 2px;">{latest_market_date}</div>
             </div>
         </div>
     </div>
