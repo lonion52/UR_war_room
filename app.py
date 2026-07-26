@@ -9,7 +9,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. 注入自定義 CSS 與精準清除腳本
+# 2. 注入自定義 CSS (修復標題遮蔽、採用瑞士極簡與沙丘色系)
 st.markdown("""
     <style>
         #MainMenu {visibility: hidden;}
@@ -20,6 +20,18 @@ st.markdown("""
             background-color: #1f1a14;
         }
         
+        /* 獨立頂部標題區塊，確保絕對不被遮蔽 */
+        .fixed-header {
+            background-color: #fcf8f2;
+            color: #1f1a14;
+            font-family: 'Space Grotesk', 'Noto Sans TC', sans-serif;
+            max-width: 900px;
+            margin: 0 auto 16px auto;
+            border: 1px solid #1f1a14;
+            padding: 16px;
+            box-shadow: 2px 2px 0px #1f1a14;
+        }
+
         .main-container {
             background-color: #f0e6d2;
             color: #1f1a14;
@@ -27,7 +39,7 @@ st.markdown("""
             max-width: 900px;
             margin: 0 auto;
             border: 1px solid #1f1a14;
-            padding: 24px;
+            padding: 20px;
         }
 
         .swiss-card {
@@ -68,7 +80,7 @@ st.markdown("""
         }
     </style>
 
-    <!-- 精準清除右下角 Streamlit 浮動按鈕，不影響網頁其他內容 -->
+    <!-- 精準清除右下角 Streamlit 浮動按鈕 -->
     <script>
         const removeBadges = () => {
             const doc = window.parent.document;
@@ -83,7 +95,6 @@ st.markdown("""
 @st.cache_data(ttl=600)
 def load_data():
     try:
-        # 請在此處填入你部署好的 Google Apps Script 網頁應用程式網址
         gas_url = "https://script.google.com/macros/s/AKfycbyZwj4KHu0BmmAfc3w8MOVxe3yh9rELyxUez_pWosUsMFM3IEqg9hK-F2p2BaHGJf5v/exec"
         
         df_action = pd.read_csv(f"{gas_url}?sheet=Action")
@@ -104,23 +115,30 @@ if not df_status.empty and len(df_status.columns) >= 2:
 
 last_sync_time = status_dict.get('最後更新時間', '2026-07-27 17:05:00')
 
-# 4. 前端排版主體
+# --- 獨立頂部標題區塊 (絕不被遮蔽) ---
+st.markdown(f"""
+    <div class="fixed-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14; opacity: 0.7;">SYSTEM // DUNE EDITION</span>
+                <div class="swiss-title" style="font-size: 18px; color: #1f1a14; margin-top: 2px;">鋼鐵柚子戰情室</div>
+            </div>
+            <div style="text-align: right;">
+                <span style="display: inline-block; width: 8px; height: 8px; background-color: #556B2F; border-radius: 50%;"></span>
+                <div style="font-size: 9px; font-family: monospace; color: #1f1a14; font-weight: bold; margin-top: 2px;">{str(last_sync_time).split(" ")[-1]}</div>
+            </div>
+        </div>
+    </div>
+""", unsafe_allow_html=True)
+
+# 4. 主容器開始
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
-
-col1, col2 = st.columns([3, 1])
-with col1:
-    st.markdown('<span style="font-size: 10px; font-family: monospace; opacity: 0.8; color: #1f1a14;">SYSTEM // DUNE EDITION</span>', unsafe_allow_html=True)
-    st.markdown('<h1 class="swiss-title" style="font-size: 20px; margin: 0; color: #1f1a14;">鋼鐵柚子戰情室</h1>', unsafe_allow_html=True)
-with col2:
-    st.markdown(f'<div style="text-align: right;"><span style="display: inline-block; width: 8px; height: 8px; background-color: #556B2F; border-radius: 50%;"></span><br><span style="font-size: 9px; font-family: monospace; color: #1f1a14; font-weight: bold;">{str(last_sync_time).split(" ")[-1]}</span></div>', unsafe_allow_html=True)
-
-st.markdown("<hr style='border: 0; border-top: 1px solid #1f1a14; margin: 12px 0;'>", unsafe_allow_html=True)
 
 tab_action, tab_status, tab_market = st.tabs(["Action", "Dashboard", "Quotes"])
 
 # --- 頁籤一：明日行動 (Action) ---
 with tab_action:
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin-bottom: 12px; font-weight: bold; color: #1f1a14;">EXECUTIVE DIRECTIVE</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">EXECUTIVE DIRECTIVE</div>', unsafe_allow_html=True)
     
     if df_action.empty:
         st.markdown('<div class="swiss-card">今日無待執行指令或尚無資料。</div>', unsafe_allow_html=True)
@@ -147,31 +165,63 @@ with tab_action:
                 </div>
             """, unsafe_allow_html=True)
 
-# --- 頁籤二：狀態面板 (Dashboard) ---
+# --- 頁籤二：狀態面板 (Dashboard - 整合資產比例、回撤監控與加碼觸發率) ---
 with tab_status:
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin-bottom: 12px; font-weight: bold; color: #1f1a14;">QUANTITATIVE STATE</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">PORTFOLIO & RISK METRICS</div>', unsafe_allow_html=True)
     
-    if df_status.empty:
-        st.markdown('<div class="swiss-card">尚無狀態面板資料。</div>', unsafe_allow_html=True)
+    # 1. 區塊：資產配置比例
+    st.markdown("""
+        <div class="swiss-card">
+            <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px; color: #1f1a14;">ASSET ALLOCATION (資產佔比)</div>
+            <div style="font-family: monospace; font-size: 11px; margin-bottom: 6px; display: flex; justify-content: space-between;">
+                <span>0050 (核心) / 00631L / 2330 等</span>
+                <span style="font-weight: bold;">依試算表即時連動</span>
+            </div>
+            <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; display: flex; overflow: hidden;">
+                <div style="width: 40%; background-color: #1f1a14;"></div>
+                <div style="width: 30%; background-color: #556B2F;"></div>
+                <div style="width: 30%; background-color: #FF6B35;"></div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 2. 區塊：00631L 專屬左右側部署情況
+    stage_631l = status_dict.get('00631L_左側階段', 'Stage 2')
+    st.markdown(f"""
+        <div class="swiss-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-weight: bold; font-size: 13px; color: #1f1a14;">00631L 戰術部署 (左右側)</span>
+                <span style="background-color: #FFD500; padding: 2px 6px; font-size: 10px; font-family: monospace; font-weight: bold; color: #1f1a14;">{stage_631l}</span>
+            </div>
+            <div style="font-size: 11px; font-family: monospace; opacity: 0.8; color: #1f1a14;">
+                執行專屬動態加碼與逢低佈局邏輯。
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 3. 區塊：一般標的回撤監控與加碼觸發率
+    st.markdown("""
+        <div class="swiss-card">
+            <div style="font-weight: bold; font-size: 13px; margin-bottom: 10px; color: #1f1a14;">DRAWDOWN & TRIGGER RATE (回撤與觸發率)</div>
+    """, unsafe_allow_html=True)
+    
+    if status_dict:
+        for k, v in status_dict.items():
+            if '00631L' not in k and '最後更新時間' not in k:
+                st.markdown(f"""
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #d4c5ab; font-family: monospace; font-size: 12px;">
+                        <span style="font-weight: bold; color: #1f1a14;">{k}</span>
+                        <span style="background-color: #f0e6d2; padding: 2px 6px; border: 1px solid #1f1a14; font-weight: bold; color: #1f1a14;">{v}</span>
+                    </div>
+                """, unsafe_allow_html=True)
     else:
-        for index, row in df_status.iterrows():
-            key_name = row.iloc[0] if len(row) > 0 else ""
-            val_name = row.iloc[1] if len(row) > 1 else ""
-            
-            st.markdown(f"""
-                <div class="swiss-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
-                    <div style="font-weight: bold; font-size: 13px; font-family: monospace; color: #1f1a14;">
-                        {key_name}
-                    </div>
-                    <div style="font-size: 15px; font-weight: bold; font-family: monospace; color: #1f1a14; background-color: #f0e6d2; padding: 4px 8px; border: 1px solid #1f1a14;">
-                        {val_name}
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+        st.markdown('<div style="font-family: monospace; font-size: 11px;">尚無指標資料。</div>', unsafe_allow_html=True)
+        
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- 頁籤三：報價紀錄 (Quotes) ---
 with tab_market:
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin-bottom: 12px; font-weight: bold; color: #1f1a14;">MARKET DATA BASELINE</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">MARKET DATA BASELINE</div>', unsafe_allow_html=True)
     
     if df_market.empty:
         st.markdown('<div class="swiss-card">尚無歷史報價資料。</div>', unsafe_allow_html=True)
