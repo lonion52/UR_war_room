@@ -16,11 +16,23 @@ st.markdown("""
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
-        /* 針對手機版額外隱藏右下角浮動標誌與工具列 */
-        .stDeployButton {display:none;}
-        [data-testid="stStatusWidget"] {visibility: hidden;}
-        footer.st-emotion-cache-12w0qpk {display: none;}
-        div[data-testid="stToolbar"] {visibility: hidden;}
+        /* 徹底隱藏手機版右下角的所有 Streamlit 浮動按鈕與選單 */
+        .stDeployButton {display: none !important;}
+        [data-testid="stStatusWidget"] {visibility: hidden !important;}
+        footer.st-emotion-cache-12w0qpk {display: none !important;}
+        div[data-testid="stToolbar"] {visibility: hidden !important;}
+        
+        /* 新增：隱藏右下角所有懸浮的 Streamlit 控制按鈕 */
+        div.stApp > div:nth-child(3) {display: none !important;}
+        button[kind="header"] {display: none !important;}
+        .viewerBadge_container__1QSob {display: none !important;}
+        
+        /* 隱藏右下角彩色圖標與紅色皇冠按鈕 */
+        iframe[data-testid="stRemoteDebugFrame"] {display: none !important;}
+        section[data-testid="stSidebarNav"] {display: none !important;}
+        
+        /* 針對 Streamlit 雲端版右下角浮動按鈕的通用容器隱藏 */
+        div[class*="viewerBadge"] {display: none !important;}
         
         .stApp {
             background-color: #1f1a14;
