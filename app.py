@@ -4,12 +4,12 @@ import pandas as pd
 # 1. 頁面基本設定
 st.set_page_config(
     page_title="鋼鐵柚子戰情室",
-    page_icon="⚡",
+    page_icon="柚",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# 2. 注入自定義 CSS (修復標題遮蔽、採用瑞士極簡與沙丘色系)
+# 2. 注入自定義 CSS 
 st.markdown("""
     <style>
         #MainMenu {visibility: hidden;}
@@ -20,7 +20,6 @@ st.markdown("""
             background-color: #1f1a14;
         }
         
-        /* 獨立頂部標題區塊，確保絕對不被遮蔽 */
         .fixed-header {
             background-color: #fcf8f2;
             color: #1f1a14;
@@ -80,7 +79,6 @@ st.markdown("""
         }
     </style>
 
-    <!-- 精準清除右下角 Streamlit 浮動按鈕 -->
     <script>
         const removeBadges = () => {
             const doc = window.parent.document;
@@ -91,7 +89,7 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# 3. 讀取 Google 試算表資料的函數 (透過 GAS 網頁應用程式)
+# 3. 讀取 Google 試算表資料的函數
 @st.cache_data(ttl=600)
 def load_data():
     try:
@@ -105,17 +103,27 @@ def load_data():
     except Exception as e:
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
-# 載入資料
 df_action, df_status, df_market = load_data()
 
-# 將狀態面板轉換成字典
+# 整理狀態資料與即時價格對應
 status_dict = {}
 if not df_status.empty and len(df_status.columns) >= 2:
     status_dict = dict(zip(df_status.iloc[:, 0], df_status.iloc[:, 1]))
 
+# 建立市場收盤價對應字典 (代號 -> 收盤價)
+price_dict = {}
+if not df_market.empty:
+    for _, row in df_market.iterrows():
+        sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip()
+        prc = row.get('收盤價', row.iloc[3] if len(row) > 3 else 0)
+        try:
+            price_dict[sym] = float(prc)
+        except:
+            pass
+
 last_sync_time = status_dict.get('最後更新時間', '2026-07-27 17:05:00')
 
-# --- 獨立頂部標題區塊 (絕不被遮蔽) ---
+# 獨立頂部標題區塊
 st.markdown(f"""
     <div class="fixed-header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -131,7 +139,6 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# 4. 主容器開始
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
 tab_action, tab_status, tab_market = st.tabs(["Action", "Dashboard", "Quotes"])
@@ -165,27 +172,11 @@ with tab_action:
                 </div>
             """, unsafe_allow_html=True)
 
-# --- 頁籤二：狀態面板 (Dashboard - 整合資產比例、回撤監控與加碼觸發率) ---
+# --- 頁籤二：狀態面板 (Dashboard) ---
 with tab_status:
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">PORTFOLIO & RISK METRICS</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
     
-    # 1. 區塊：資產配置比例
-    st.markdown("""
-        <div class="swiss-card">
-            <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px; color: #1f1a14;">ASSET ALLOCATION (資產佔比)</div>
-            <div style="font-family: monospace; font-size: 11px; margin-bottom: 6px; display: flex; justify-content: space-between;">
-                <span>0050 (核心) / 00631L / 2330 等</span>
-                <span style="font-weight: bold;">依試算表即時連動</span>
-            </div>
-            <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; display: flex; overflow: hidden;">
-                <div style="width: 40%; background-color: #1f1a14;"></div>
-                <div style="width: 30%; background-color: #556B2F;"></div>
-                <div style="width: 30%; background-color: #FF6B35;"></div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-    # 2. 區塊：00631L 專屬左右側部署情況
+    # 1. 00631L 專屬左右側部署情況
     stage_631l = status_dict.get('00631L_左側階段', 'Stage 2')
     st.markdown(f"""
         <div class="swiss-card">
@@ -194,30 +185,61 @@ with tab_status:
                 <span style="background-color: #FFD500; padding: 2px 6px; font-size: 10px; font-family: monospace; font-weight: bold; color: #1f1a14;">{stage_631l}</span>
             </div>
             <div style="font-size: 11px; font-family: monospace; opacity: 0.8; color: #1f1a14;">
-                執行專屬動態加碼與逢低佈局邏輯。
+                執行專屬動態加碼與逢低佈局邏輯（排除標準回撤監控）。
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-    # 3. 區塊：一般標的回撤監控與加碼觸發率
-    st.markdown("""
-        <div class="swiss-card">
-            <div style="font-weight: bold; font-size: 13px; margin-bottom: 10px; color: #1f1a14;">DRAWDOWN & TRIGGER RATE (回撤與觸發率)</div>
-    """, unsafe_allow_html=True)
+    # 2. 其他標的回撤監控
+    target_symbols = [sym for sym in price_dict.keys() if sym != '00631L']
     
-    if status_dict:
-        for k, v in status_dict.items():
-            if '00631L' not in k and '最後更新時間' not in k:
-                st.markdown(f"""
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed #d4c5ab; font-family: monospace; font-size: 12px;">
-                        <span style="font-weight: bold; color: #1f1a14;">{k}</span>
-                        <span style="background-color: #f0e6d2; padding: 2px 6px; border: 1px solid #1f1a14; font-weight: bold; color: #1f1a14;">{v}</span>
-                    </div>
-                """, unsafe_allow_html=True)
-    else:
-        st.markdown('<div style="font-family: monospace; font-size: 11px;">尚無指標資料。</div>', unsafe_allow_html=True)
+    if not target_symbols and not df_market.empty:
+        for _, row in df_market.iterrows():
+            sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip()
+            if sym and sym != '00631L' and sym not in target_symbols:
+                target_symbols.append(sym)
+
+    for sym in target_symbols:
+        name_val = ""
+        for _, row in df_market.iterrows():
+            if str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip() == sym:
+                name_val = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
+                break
         
-    st.markdown('</div>', unsafe_allow_html=True)
+        current_price = price_dict.get(sym, 0)
+        peak_price = float(status_dict.get(f'{sym}_最高價', current_price if current_price > 0 else 100))
+        
+        if peak_price > 0:
+            drawdown_pct = ((current_price - peak_price) / peak_price) * 100
+        else:
+            drawdown_pct = 0.0
+            
+        bar_width = max(0, min(100, 100 + drawdown_pct))
+
+        st.markdown(f"""
+            <div class="swiss-card">
+                <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">
+                    {sym} // {name_val} 回撤監控
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
+                    <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
+                        <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br>
+                        <strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong>
+                    </div>
+                    <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
+                        <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br>
+                        <strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong>
+                    </div>
+                </div>
+                <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;">
+                    <span>高點回撤幅度</span>
+                    <span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span>
+                </div>
+                <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;">
+                    <div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
 # --- 頁籤三：報價紀錄 (Quotes) ---
 with tab_market:
