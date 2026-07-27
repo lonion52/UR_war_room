@@ -95,6 +95,7 @@ st.markdown("""
 @st.cache_data(ttl=60)
 def load_data():
     try:
+        # 請在此處填入您真實的 GAS 部署網址
         gas_url = "https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec"
         res_action = requests.get(f"{gas_url}?sheet=Action", allow_redirects=True)
         df_action = pd.read_csv(io.StringIO(res_action.text), dtype=str).fillna("") if res_action.status_code == 200 else pd.DataFrame()
@@ -129,15 +130,11 @@ if not df_market.empty:
         row_date = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).strip().replace("'", "")
         sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip().replace("'", "")
         prc = row.get('收盤價', row.iloc[3] if len(row) > 3 else 0)
-        
         try:
             prc_float = float(str(prc).replace(',', ''))
-            if row_date == latest_market_date:
-                price_dict[sym] = prc_float
-            else:
-                prev_price_dict[sym] = prc_float
-        except:
-            pass
+            if row_date == latest_market_date: price_dict[sym] = prc_float
+            else: prev_price_dict[sym] = prc_float
+        except: pass
 
 st.markdown(f"""
     <div class="fixed-header">
@@ -174,6 +171,9 @@ with tab_market:
                 symbol_m = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
                 name_m = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
                 price_m = str(row.get('收盤價', row.iloc[3] if len(row) > 3 else ""))
+                change_m = str(row.get('漲跌幅', row.iloc[4] if len(row) > 4 else ""))
+                if change_m == "nan" or change_m == "休市": change_m = ""
+                
                 price_color = "#1f1a14" 
                 try:
                     curr_prc = float(price_m.replace(',', ''))
@@ -181,15 +181,17 @@ with tab_market:
                         prev_prc = prev_price_dict[symbol_m]
                         if curr_prc > prev_prc: price_color = "#FF6B35" 
                         elif curr_prc < prev_prc: price_color = "#7ba23f" 
-                except:
-                    pass
+                except: pass
+                
                 st.markdown(f"""
                     <div class="swiss-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
                         <div>
                             <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">{date_m}</span>
                             <div style="font-weight: bold; font-size: 13px; font-family: monospace; color: #1f1a14;">{symbol_m} // {name_m}</div>
                         </div>
-                        <div style="font-size: 16px; font-weight: bold; font-family: monospace; color: {price_color};">{price_m}</div>
+                        <div style="font-size: 16px; font-weight: bold; font-family: monospace; color: {price_color}; text-align: right;">
+                            {price_m}<br><span style="font-size: 10px; opacity: 0.8;">{change_m}</span>
+                        </div>
                     </div>
                 """, unsafe_allow_html=True)
 
@@ -197,7 +199,8 @@ with tab_market:
 with tab_status:
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
     
-    ordered_symbols = ["0050", "00631L", "00981A"]
+    # 確保顯示順序：大盤 -> 0050 -> 00631L -> 00981A -> 其他
+    ordered_symbols = ["^TWII", "0050", "00631L", "00981A"]
     for s in price_dict.keys():
         if s not in ordered_symbols: ordered_symbols.append(s)
 
@@ -224,7 +227,22 @@ with tab_status:
         drawdown_pct = ((current_price - peak_price) / peak_price) * 100 if peak_price > 0 else 0.0
         bar_width = max(0, min(100, 100 + drawdown_pct))
 
-        if sym == "0050":
+        # --- 新增：大盤專屬指示器 (^TWII) ---
+        if sym == "^TWII":
+            st.markdown(f"""
+                <div class="swiss-card" style="border: 2px solid #1f1a14; background-color: #f0e6d2;">
+                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">大盤天氣預報 // {name_val}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
+                        <div style="background-color: #fcf8f2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT POINT</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price:,.0f}</strong></div>
+                        <div style="background-color: #fcf8f2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK POINT</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price:,.0f}</strong></div>
+                    </div>
+                    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>大盤波段回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
+                    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
+                </div>
+            """, unsafe_allow_html=True)
+
+        # --- A. 0050 專屬面板 ---
+        elif sym == "0050":
             p90 = peak_price * 0.9
             p80 = peak_price * 0.8
             p70 = peak_price * 0.7
@@ -248,6 +266,7 @@ with tab_status:
                 </div>
             """, unsafe_allow_html=True)
 
+        # --- B. 00631L 專屬戰術面板 ---
         elif sym == "00631L":
             try: left_val = int(float(str(status_dict.get('00631L_左側階段', '0')).replace(',', '')))
             except: left_val = 0
@@ -304,6 +323,7 @@ with tab_status:
                 </div>
             """, unsafe_allow_html=True)
 
+        # --- C. 00981A 轉倉面板 ---
         elif sym == "00981A":
             try: transfer_code = int(float(str(status_dict.get('00981A_轉倉狀態', 0)).replace(',', '')))
             except: transfer_code = 0
@@ -318,6 +338,7 @@ with tab_status:
                 </div>
             """, unsafe_allow_html=True)
 
+        # --- D. 其餘衛星部位 ---
         else:
             st.markdown(f"""
                 <div class="swiss-card">
@@ -344,12 +365,18 @@ with tab_action:
             action_type = row.get('動作', row.iloc[3] if len(row) > 3 else "BUY")
             message_val = row.get('內容', row.iloc[4] if len(row) > 4 else "")
             badge_color = "#FF6B35" if "BUY" in str(action_type).upper() else "#FFD500" if "SELL" in str(action_type).upper() else "#7ba23f"
+            
+            # Action 特殊提醒樣式
+            if symbol_val == "PORTFOLIO" or action_type == "CHECK":
+                badge_color = "#4a69bd"
+                symbol_val = "系統健診"
+                
             st.markdown(f"""
                 <div class="swiss-card" style="position: relative;">
                     <div style="position: absolute; top: 0; right: 0; background-color: {badge_color}; color: #1f1a14; font-size: 9px; font-family: monospace; padding: 2px 6px; font-weight: bold;">{category_val} // {action_type}</div>
                     <span style="font-size: 10px; font-family: monospace; font-weight: bold; color: #1f1a14;">TARGET: {symbol_val}</span>
                     <div style="font-size: 15px; font-weight: bold; margin: 4px 0 8px 0; color: #1f1a14;">{date_val} 執行指令</div>
-                    <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px;">{message_val}</div>
+                    <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px; white-space: pre-line;">{message_val}</div>
                 </div>
             """, unsafe_allow_html=True)
 
