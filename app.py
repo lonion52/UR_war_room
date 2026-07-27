@@ -96,8 +96,8 @@ def load_data():
         gas_url = "https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec"
         
         df_action = pd.read_csv(f"{gas_url}?sheet=Action", dtype=str).fillna("")
-        df_status = pd.read_csv(f"{gas_url}?sheet=State", dtype=str).fillna("")
         df_market = pd.read_csv(f"{gas_url}?sheet=Quotes", dtype=str).fillna("")
+        df_status = pd.read_csv(f"{gas_url}?sheet=State", dtype=str, header=None).fillna("")
         
         return df_action, df_status, df_market
     except Exception as e:
@@ -105,15 +105,16 @@ def load_data():
 
 df_action, df_status, df_market = load_data()
 
-# 整理狀態資料
+# 整理狀態資料 
 status_dict = {}
 if not df_status.empty and len(df_status.columns) >= 2:
     for k, v in zip(df_status.iloc[:, 0], df_status.iloc[:, 1]):
         clean_key = str(k).strip().replace("'", "")
         status_dict[clean_key] = v
 
-# 建立市場收盤價對應字典 
+# 建立市場收盤價對應字典與前一次收盤價對應字典
 price_dict = {}
+prev_price_dict = {}
 latest_market_date = "2026-07-27"  
 
 if not df_market.empty:
@@ -121,10 +122,16 @@ if not df_market.empty:
     latest_market_date = str(last_row.get('日期', last_row.iloc[0] if len(last_row) > 0 else "2026-07-27")).strip().replace("'", "")
     
     for _, row in df_market.iterrows():
+        row_date = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).strip().replace("'", "")
         sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip().replace("'", "")
         prc = row.get('收盤價', row.iloc[3] if len(row) > 3 else 0)
+        
         try:
-            price_dict[sym] = float(str(prc).replace(',', ''))
+            prc_float = float(str(prc).replace(',', ''))
+            if row_date == latest_market_date:
+                price_dict[sym] = prc_float
+            else:
+                prev_price_dict[sym] = prc_float
         except:
             pass
 
@@ -180,7 +187,7 @@ with tab_action:
 with tab_status:
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
     
-    # 1. 00631L 專屬戰術部署
+    # 1. 00631L 專屬戰術部署 (加入總計 3 次上限邏輯與進度顯示)
     stage_631l_left_raw = status_dict.get('00631L_左側階段', '0')
     stage_631l_right_raw = status_dict.get('00631L_右側階段', '0')
     
@@ -194,7 +201,13 @@ with tab_status:
     except:
         right_val = 0
 
-    if left_val == 0 and right_val == 0:
+    total_buys_631l = left_val + right_val
+
+    if total_buys_631l >= 3:
+        status_text_631l = "達佈局上限 (3次)"
+        status_color_631l = "#FFD500" # 黃色警示
+        text_color_631l = "#1f1a14"
+    elif left_val == 0 and right_val == 0:
         status_text_631l = "常態佈局中"
         status_color_631l = "#7ba23f"
         text_color_631l = "#f0e6d2"
@@ -213,9 +226,22 @@ with tab_status:
 
     st.markdown(f"""
         <div class="swiss-card">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: bold; font-size: 13px; color: #1f1a14;">00631L 戰術部署</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: bold; font-size: 13px; color: #1f1a14;">
+                    00631L 戰術部署
+                    <span style="font-size: 10px; opacity: 0.6; margin-left: 6px; font-family: monospace;">(庫存: {total_buys_631l}/3)</span>
+                </span>
                 <span style="background-color: {status_color_631l}; color: {text_color_631l}; padding: 4px 8px; font-size: 10px; font-family: monospace; font-weight: bold;">{status_text_631l}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace;">
+                <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
+                    <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">左側庫存 (回撤加碼)</span><br>
+                    <strong style="font-size: 14px; color: #1f1a14;">Stage {left_val}</strong>
+                </div>
+                <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
+                    <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">右側庫存 (動能追擊)</span><br>
+                    <strong style="font-size: 14px; color: #1f1a14;">Stage {right_val}</strong>
+                </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -239,7 +265,7 @@ with tab_status:
         </div>
     """, unsafe_allow_html=True)
 
-    # 3. 標準回撤監控 (排除 00631L 與 00981A)
+    # 3. 標準回撤監控
     target_symbols = [sym for sym in price_dict.keys() if sym not in ['00631L', '00981A']]
     
     for sym in target_symbols:
@@ -252,9 +278,11 @@ with tab_status:
         
         current_price = price_dict.get(sym, 0)
         
-        # 【核心修正】：精確對應「元大0050_最高價」
-        target_key = "元大0050_最高價" if sym == "0050" else f"{sym}_最高價"
-        peak_val_raw = status_dict.get(target_key, current_price)
+        peak_val_raw = current_price
+        for k, v in status_dict.items():
+            if sym in k and "最高價" in k:
+                peak_val_raw = v
+                break
                 
         try:
             peak_price = float(str(peak_val_raw).replace(',', ''))
@@ -315,13 +343,26 @@ with tab_market:
                 name_m = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
                 price_m = str(row.get('收盤價', row.iloc[3] if len(row) > 3 else ""))
                 
+                # 漲跌顏色判定
+                price_color = "#1f1a14"
+                try:
+                    curr_prc = float(price_m.replace(',', ''))
+                    if symbol_m in prev_price_dict:
+                        prev_prc = prev_price_dict[symbol_m]
+                        if curr_prc > prev_prc:
+                            price_color = "#FF6B35" 
+                        elif curr_prc < prev_prc:
+                            price_color = "#7ba23f" 
+                except:
+                    pass
+                
                 st.markdown(f"""
                     <div class="swiss-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
                         <div>
                             <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">{date_m}</span>
                             <div style="font-weight: bold; font-size: 13px; font-family: monospace; color: #1f1a14;">{symbol_m} // {name_m}</div>
                         </div>
-                        <div style="font-size: 16px; font-weight: bold; font-family: monospace; color: #1f1a14;">
+                        <div style="font-size: 16px; font-weight: bold; font-family: monospace; color: {price_color};">
                             {price_m}
                         </div>
                     </div>
