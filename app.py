@@ -95,7 +95,6 @@ def load_data():
     try:
         gas_url = "https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec"
         
-        # 強制轉換所有欄位為字串，避免 0050 被 Pandas 轉成整數 50 導致配對失敗
         df_action = pd.read_csv(f"{gas_url}?sheet=Action", dtype=str).fillna("")
         df_status = pd.read_csv(f"{gas_url}?sheet=State", dtype=str).fillna("")
         df_market = pd.read_csv(f"{gas_url}?sheet=Quotes", dtype=str).fillna("")
@@ -106,7 +105,7 @@ def load_data():
 
 df_action, df_status, df_market = load_data()
 
-# 整理狀態資料 (防呆：清除欄位名稱內的單引號與空白)
+# 整理狀態資料
 status_dict = {}
 if not df_status.empty and len(df_status.columns) >= 2:
     for k, v in zip(df_status.iloc[:, 0], df_status.iloc[:, 1]):
@@ -181,7 +180,7 @@ with tab_action:
 with tab_status:
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
     
-    # 1. 00631L 專屬左右側部署情況 (極簡動態標籤版)
+    # 1. 00631L 專屬戰術部署
     stage_631l_left_raw = status_dict.get('00631L_左側階段', '0')
     stage_631l_right_raw = status_dict.get('00631L_右側階段', '0')
     
@@ -253,12 +252,9 @@ with tab_status:
         
         current_price = price_dict.get(sym, 0)
         
-        # 嚴密比對：透過模糊收尋避免空格或特殊字元干擾
-        peak_val_raw = current_price
-        for k, v in status_dict.items():
-            if sym in k and "最高價" in k:
-                peak_val_raw = v
-                break
+        # 【核心修正】：精確對應「元大0050_最高價」
+        target_key = "元大0050_最高價" if sym == "0050" else f"{sym}_最高價"
+        peak_val_raw = status_dict.get(target_key, current_price)
                 
         try:
             peak_price = float(str(peak_val_raw).replace(',', ''))
