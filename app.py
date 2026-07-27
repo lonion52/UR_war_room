@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import requests
+import io
 
 # 1. 頁面基本設定
 st.set_page_config(
@@ -89,18 +91,25 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# 3. 讀取 Google 試算表資料的函數
-@st.cache_data(ttl=600)
+# 3. 讀取 Google 試算表資料的函數 (使用 requests 確保穩定連線)
+@st.cache_data(ttl=60)
 def load_data():
     try:
-        gas_url = "[https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec](https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec)"
+        # 請在此處填入您真實的 GAS 部署網址（務必確保沒有多餘的中括號與重複）
+        gas_url = "https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec"
         
-        df_action = pd.read_csv(f"{gas_url}?sheet=Action", dtype=str).fillna("")
-        df_market = pd.read_csv(f"{gas_url}?sheet=Quotes", dtype=str).fillna("")
-        df_status = pd.read_csv(f"{gas_url}?sheet=State", dtype=str, header=None).fillna("")
+        res_action = requests.get(f"{gas_url}?sheet=Action", allow_redirects=True)
+        df_action = pd.read_csv(io.StringIO(res_action.text), dtype=str).fillna("") if res_action.status_code == 200 else pd.DataFrame()
+        
+        res_market = requests.get(f"{gas_url}?sheet=Quotes", allow_redirects=True)
+        df_market = pd.read_csv(io.StringIO(res_market.text), dtype=str).fillna("") if res_market.status_code == 200 else pd.DataFrame()
+        
+        res_status = requests.get(f"{gas_url}?sheet=State", allow_redirects=True)
+        df_status = pd.read_csv(io.StringIO(res_status.text), dtype=str, header=None).fillna("") if res_status.status_code == 200 else pd.DataFrame()
         
         return df_action, df_status, df_market
     except Exception as e:
+        st.error(f"連線至 Google 試算表失敗: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_action, df_status, df_market = load_data()
@@ -221,7 +230,6 @@ with tab_status:
                 name_val = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
                 break
         
-        # 取出最高價
         peak_val_raw = current_price
         for k, v in status_dict.items():
             if sym in k and "最高價" in k:
@@ -298,11 +306,9 @@ with tab_status:
             try: right_val = int(float(str(status_dict.get('00631L_右側階段', '0')).replace(',', '')))
             except: right_val = 0
             
-            # 取得右側進攻基準價
             right_base = float(status_dict.get('00631L_右側基準價', peak_price))
             if right_base == 0: right_base = peak_price
             
-            # 庫存格子計算 (1x3)
             inv_slots = []
             for _ in range(left_val): inv_slots.append("防禦 (回撤)")
             for _ in range(right_val): inv_slots.append("進攻 (動能)")
@@ -310,14 +316,13 @@ with tab_status:
             
             inv_html = "".join([f'<div style="background-color: {"#FF6B35" if s != "空缺" else "#e4dac6"}; color: {"#1f1a14" if s != "空缺" else "#a09a8f"}; border: 1px solid #1f1a14; text-align: center; padding: 6px; font-weight: bold; font-size: 11px;">{s}</div>' for s in inv_slots])
 
-            # 3x4 Grid 狀態計算
-            L_85 = "已達到目標價" if current_price <= peak_price * 0.85 else "-"
-            L_80 = "已達到目標價" if current_price <= peak_price * 0.80 else "-"
-            L_70 = "已達到目標價" if current_price <= peak_price * 0.70 else "-"
+            L_85 = "已達到目標價" if current_price <= peak_price * 0.85 else "未達到"
+            L_80 = "已達到目標價" if current_price <= peak_price * 0.80 else "未達到"
+            L_70 = "已達到目標價" if current_price <= peak_price * 0.70 else "未達到"
             
-            R_10 = "已達到目標價" if current_price >= right_base * 1.0 else "-"
-            R_11 = "已達到目標價" if current_price >= right_base * 1.1 else "-"
-            R_12 = "已達到目標價" if current_price >= right_base * 1.2 else "-"
+            R_10 = "已達到目標價" if current_price >= right_base * 1.0 else "未達到"
+            R_11 = "已達到目標價" if current_price >= right_base * 1.1 else "未達到"
+            R_12 = "已達到目標價" if current_price >= right_base * 1.2 else "未達到"
 
             st.markdown(f"""
                 <div class="swiss-card">
@@ -339,24 +344,24 @@ with tab_status:
                         <!-- 左側 3x2 -->
                         <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 4px;">
                             <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 0.85</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_85 != '-' else '#1f1a14'}; font-weight: bold;">{L_85}</div>
+                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_85 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{L_85}</div>
                             
                             <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 0.80</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_80 != '-' else '#1f1a14'}; font-weight: bold;">{L_80}</div>
+                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_80 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{L_80}</div>
                             
                             <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 0.70</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_70 != '-' else '#1f1a14'}; font-weight: bold;">{L_70}</div>
+                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_70 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{L_70}</div>
                         </div>
                         <!-- 右側 3x2 -->
                         <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 4px;">
                             <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">歷史高點</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_10 != '-' else '#1f1a14'}; font-weight: bold;">{R_10}</div>
+                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_10 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{R_10}</div>
                             
                             <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 1.1</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_11 != '-' else '#1f1a14'}; font-weight: bold;">{R_11}</div>
+                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_11 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{R_11}</div>
                             
                             <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 1.2</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_12 != '-' else '#1f1a14'}; font-weight: bold;">{R_12}</div>
+                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_12 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{R_12}</div>
                         </div>
                     </div>
                 </div>
