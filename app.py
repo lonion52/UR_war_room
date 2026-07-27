@@ -105,23 +105,23 @@ def load_data():
 
 df_action, df_status, df_market = load_data()
 
-# 整理狀態資料 (防呆：清除欄位名稱與數值內的空白與逗號，確保浮點數轉換正常)
+# 整理狀態資料 (防呆：清除欄位名稱內的單引號與空白)
 status_dict = {}
 if not df_status.empty and len(df_status.columns) >= 2:
     for k, v in zip(df_status.iloc[:, 0], df_status.iloc[:, 1]):
-        clean_key = str(k).strip()
+        clean_key = str(k).strip().replace("'", "")
         status_dict[clean_key] = v
 
-# 建立市場收盤價對應字典
+# 建立市場收盤價對應字典 (防呆：清除股票代號與日期的單引號)
 price_dict = {}
 latest_market_date = "2026-07-27"  
 
 if not df_market.empty:
     last_row = df_market.iloc[-1]
-    latest_market_date = str(last_row.get('日期', last_row.iloc[0] if len(last_row) > 0 else "2026-07-27")).strip()
+    latest_market_date = str(last_row.get('日期', last_row.iloc[0] if len(last_row) > 0 else "2026-07-27")).strip().replace("'", "")
     
     for _, row in df_market.iterrows():
-        sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip()
+        sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip().replace("'", "")
         prc = row.get('收盤價', row.iloc[3] if len(row) > 3 else 0)
         try:
             price_dict[sym] = float(str(prc).replace(',', ''))
@@ -155,8 +155,8 @@ with tab_action:
         st.markdown('<div class="swiss-card">今日無待執行指令或尚無資料。</div>', unsafe_allow_html=True)
     else:
         for index, row in df_action.iterrows():
-            date_val = row.get('日期', row.iloc[0] if len(row) > 0 else "")
-            symbol_val = row.get('股票代號', row.iloc[1] if len(row) > 1 else "")
+            date_val = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).replace("'", "")
+            symbol_val = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
             category_val = row.get('類別', row.iloc[2] if len(row) > 2 else "")
             action_type = row.get('動作', row.iloc[3] if len(row) > 3 else "BUY")
             message_val = row.get('內容', row.iloc[4] if len(row) > 4 else "")
@@ -180,23 +180,52 @@ with tab_action:
 with tab_status:
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
     
-    # 1. 00631L 專屬左右側部署情況
-    stage_631l_left = status_dict.get('00631L_左側階段', '0')
-    stage_631l_right = status_dict.get('00631L_右側階段', '0')
+    # 1. 00631L 專屬左右側部署情況 (含動態顏色標籤)
+    stage_631l_left_raw = status_dict.get('00631L_左側階段', '0')
+    stage_631l_right_raw = status_dict.get('00631L_右側階段', '0')
     
+    try:
+        left_val = int(float(str(stage_631l_left_raw).replace(',', '')))
+    except:
+        left_val = 0
+        
+    try:
+        right_val = int(float(str(stage_631l_right_raw).replace(',', '')))
+    except:
+        right_val = 0
+
+    # 狀態標籤邏輯判斷
+    if left_val == 0 and right_val == 0:
+        status_text_631l = "常態佈局中"
+        status_color_631l = "#7ba23f"
+        text_color_631l = "#f0e6d2"
+    elif left_val > 0 and right_val == 0:
+        status_text_631l = "觸發：回撤加碼"
+        status_color_631l = "#FF6B35"
+        text_color_631l = "#1f1a14"
+    elif left_val == 0 and right_val > 0:
+        status_text_631l = "觸發：動能追擊"
+        status_color_631l = "#FF6B35"
+        text_color_631l = "#1f1a14"
+    else:
+        status_text_631l = "雙向動態佈局中"
+        status_color_631l = "#FF6B35"
+        text_color_631l = "#1f1a14"
+
     st.markdown(f"""
         <div class="swiss-card">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-weight: bold; font-size: 13px; color: #1f1a14;">00631L 戰術部署</span>
+                <span style="background-color: {status_color_631l}; color: {text_color_631l}; padding: 4px 8px; font-size: 10px; font-family: monospace; font-weight: bold;">{status_text_631l}</span>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace;">
                 <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
                     <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">左側階段 (回撤加碼)</span><br>
-                    <strong style="font-size: 14px; color: #1f1a14;">Stage {int(float(str(stage_631l_left).replace(',','')))}</strong>
+                    <strong style="font-size: 14px; color: #1f1a14;">Stage {left_val}</strong>
                 </div>
                 <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
                     <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">右側階段 (動能追擊)</span><br>
-                    <strong style="font-size: 14px; color: #1f1a14;">Stage {int(float(str(stage_631l_right).replace(',','')))}</strong>
+                    <strong style="font-size: 14px; color: #1f1a14;">Stage {right_val}</strong>
                 </div>
             </div>
         </div>
@@ -227,7 +256,8 @@ with tab_status:
     for sym in target_symbols:
         name_val = ""
         for _, row in df_market.iterrows():
-            if str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip() == sym:
+            row_sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip().replace("'", "")
+            if row_sym == sym:
                 name_val = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
                 break
         
@@ -282,16 +312,18 @@ with tab_market:
     if df_market.empty:
         st.markdown('<div class="swiss-card">尚無歷史報價資料。</div>', unsafe_allow_html=True)
     else:
-        df_latest_market = df_market[df_market.iloc[:, 0].astype(str).str.strip() == latest_market_date]
+        # 比對時強制清理 df_market 內的日期單引號
+        df_market_clean_date = df_market.iloc[:, 0].astype(str).str.replace("'", "").str.strip()
+        df_latest_market = df_market[df_market_clean_date == latest_market_date]
         
         if df_latest_market.empty:
             st.markdown('<div class="swiss-card">本日尚無報價資料。</div>', unsafe_allow_html=True)
         else:
             for index, row in df_latest_market.iterrows():
-                date_m = row.get('日期', row.iloc[0] if len(row) > 0 else "")
-                symbol_m = row.get('股票代號', row.iloc[1] if len(row) > 1 else "")
-                name_m = row.get('股票名稱', row.iloc[2] if len(row) > 2 else "")
-                price_m = row.get('收盤價', row.iloc[3] if len(row) > 3 else "")
+                date_m = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).replace("'", "")
+                symbol_m = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
+                name_m = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
+                price_m = str(row.get('收盤價', row.iloc[3] if len(row) > 3 else ""))
                 
                 st.markdown(f"""
                     <div class="swiss-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
