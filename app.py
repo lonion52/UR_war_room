@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-import requests
-import io
 
 # 1. 頁面基本設定
 st.set_page_config(
@@ -91,25 +89,18 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# 3. 讀取 Google 試算表資料的函數 (使用 requests 確保穩定連線)
-@st.cache_data(ttl=60)
+# 3. 讀取 Google 試算表資料的函數
+@st.cache_data(ttl=600)
 def load_data():
     try:
-        # 請在此處填入您真實的 GAS 部署網址（務必確保沒有多餘的中括號與重複）
         gas_url = "https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec"
         
-        res_action = requests.get(f"{gas_url}?sheet=Action", allow_redirects=True)
-        df_action = pd.read_csv(io.StringIO(res_action.text), dtype=str).fillna("") if res_action.status_code == 200 else pd.DataFrame()
-        
-        res_market = requests.get(f"{gas_url}?sheet=Quotes", allow_redirects=True)
-        df_market = pd.read_csv(io.StringIO(res_market.text), dtype=str).fillna("") if res_market.status_code == 200 else pd.DataFrame()
-        
-        res_status = requests.get(f"{gas_url}?sheet=State", allow_redirects=True)
-        df_status = pd.read_csv(io.StringIO(res_status.text), dtype=str, header=None).fillna("") if res_status.status_code == 200 else pd.DataFrame()
+        df_action = pd.read_csv(f"{gas_url}?sheet=Action", dtype=str).fillna("")
+        df_market = pd.read_csv(f"{gas_url}?sheet=Quotes", dtype=str).fillna("")
+        df_status = pd.read_csv(f"{gas_url}?sheet=State", dtype=str, header=None).fillna("")
         
         return df_action, df_status, df_market
     except Exception as e:
-        st.error(f"連線至 Google 試算表失敗: {e}")
         return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
 df_action, df_status, df_market = load_data()
@@ -161,257 +152,9 @@ st.markdown(f"""
 
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
-# 調整頁籤順序：Quotes -> Dashboard -> Action
-tab_market, tab_status, tab_action = st.tabs(["Quotes", "Dashboard", "Action"])
+tab_action, tab_status, tab_market = st.tabs(["Action", "Dashboard", "Quotes"])
 
-# --- 頁籤一：報價紀錄 (Quotes) ---
-with tab_market:
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">MARKET DATA BASELINE</div>', unsafe_allow_html=True)
-    
-    if df_market.empty:
-        st.markdown('<div class="swiss-card">尚無歷史報價資料。</div>', unsafe_allow_html=True)
-    else:
-        df_market_clean_date = df_market.iloc[:, 0].astype(str).str.replace("'", "").str.strip()
-        df_latest_market = df_market[df_market_clean_date == latest_market_date]
-        
-        if df_latest_market.empty:
-            st.markdown('<div class="swiss-card">本日尚無報價資料。</div>', unsafe_allow_html=True)
-        else:
-            for index, row in df_latest_market.iterrows():
-                date_m = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).replace("'", "")
-                symbol_m = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
-                name_m = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
-                price_m = str(row.get('收盤價', row.iloc[3] if len(row) > 3 else ""))
-                
-                price_color = "#1f1a14" 
-                try:
-                    curr_prc = float(price_m.replace(',', ''))
-                    if symbol_m in prev_price_dict:
-                        prev_prc = prev_price_dict[symbol_m]
-                        if curr_prc > prev_prc:
-                            price_color = "#FF6B35" # 漲橘色
-                        elif curr_prc < prev_prc:
-                            price_color = "#7ba23f" # 跌綠色
-                except:
-                    pass
-                
-                st.markdown(f"""
-                    <div class="swiss-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
-                        <div>
-                            <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">{date_m}</span>
-                            <div style="font-weight: bold; font-size: 13px; font-family: monospace; color: #1f1a14;">{symbol_m} // {name_m}</div>
-                        </div>
-                        <div style="font-size: 16px; font-weight: bold; font-family: monospace; color: {price_color};">
-                            {price_m}
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
-
-# --- 頁籤二：狀態面板 (Dashboard) ---
-with tab_status:
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
-    
-    # 確保顯示順序：0050 -> 00631L -> 00981A -> 其他
-    ordered_symbols = ["0050", "00631L", "00981A"]
-    for s in price_dict.keys():
-        if s not in ordered_symbols:
-            ordered_symbols.append(s)
-
-    for sym in ordered_symbols:
-        if sym not in price_dict:
-            continue
-            
-        current_price = price_dict.get(sym, 0)
-        
-        name_val = ""
-        for _, row in df_market.iterrows():
-            row_sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip().replace("'", "")
-            if row_sym == sym:
-                name_val = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
-                break
-        
-        peak_val_raw = current_price
-        for k, v in status_dict.items():
-            if sym in k and "最高價" in k:
-                peak_val_raw = v
-                break
-                
-        try:
-            peak_price = float(str(peak_val_raw).replace(',', ''))
-        except:
-            peak_price = current_price
-            
-        if peak_price <= 0 and current_price > 0: peak_price = current_price
-        drawdown_pct = ((current_price - peak_price) / peak_price) * 100 if peak_price > 0 else 0.0
-        bar_width = max(0, min(100, 100 + drawdown_pct))
-
-        # --- A. 0050 專屬面板 (2x3 網格) ---
-        if sym == "0050":
-            p90 = peak_price * 0.9
-            p80 = peak_price * 0.8
-            p70 = peak_price * 0.7
-            
-            s90 = "已達到目標價" if current_price <= p90 else "未達到"
-            s80 = "已達到目標價" if current_price <= p80 else "未達到"
-            s70 = "已達到目標價" if current_price <= p70 else "未達到"
-
-            st.markdown(f"""
-                <div class="swiss-card">
-                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">
-                        {sym} // {name_val} 回撤監控
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
-                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
-                            <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br>
-                            <strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong>
-                        </div>
-                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
-                            <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br>
-                            <strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong>
-                        </div>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace; text-align: center;">
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 6px;">
-                            <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">最高價 × 0.9</span><br>
-                            <strong style="font-size: 13px; color: #1f1a14;">{p90:.2f}</strong><br>
-                            <span style="font-size: 10px; font-weight: bold; color: {'#FF6B35' if s90 == '已達到目標價' else '#1f1a14'};">{s90}</span>
-                        </div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 6px;">
-                            <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">最高價 × 0.8</span><br>
-                            <strong style="font-size: 13px; color: #1f1a14;">{p80:.2f}</strong><br>
-                            <span style="font-size: 10px; font-weight: bold; color: {'#FF6B35' if s80 == '已達到目標價' else '#1f1a14'};">{s80}</span>
-                        </div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 6px;">
-                            <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">最高價 × 0.7</span><br>
-                            <strong style="font-size: 13px; color: #1f1a14;">{p70:.2f}</strong><br>
-                            <span style="font-size: 10px; font-weight: bold; color: {'#FF6B35' if s70 == '已達到目標價' else '#1f1a14'};">{s70}</span>
-                        </div>
-                    </div>
-
-                    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;">
-                        <span>高點回撤幅度</span>
-                        <span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span>
-                    </div>
-                    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;">
-                        <div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        # --- B. 00631L 專屬戰術面板 ---
-        elif sym == "00631L":
-            try: left_val = int(float(str(status_dict.get('00631L_左側階段', '0')).replace(',', '')))
-            except: left_val = 0
-            try: right_val = int(float(str(status_dict.get('00631L_右側階段', '0')).replace(',', '')))
-            except: right_val = 0
-            
-            right_base = float(status_dict.get('00631L_右側基準價', peak_price))
-            if right_base == 0: right_base = peak_price
-            
-            inv_slots = []
-            for _ in range(left_val): inv_slots.append("防禦 (回撤)")
-            for _ in range(right_val): inv_slots.append("進攻 (動能)")
-            while len(inv_slots) < 3: inv_slots.append("空缺")
-            
-            inv_html = "".join([f'<div style="background-color: {"#FF6B35" if s != "空缺" else "#e4dac6"}; color: {"#1f1a14" if s != "空缺" else "#a09a8f"}; border: 1px solid #1f1a14; text-align: center; padding: 6px; font-weight: bold; font-size: 11px;">{s}</div>' for s in inv_slots])
-
-            L_85 = "已達到目標價" if current_price <= peak_price * 0.85 else "未達到"
-            L_80 = "已達到目標價" if current_price <= peak_price * 0.80 else "未達到"
-            L_70 = "已達到目標價" if current_price <= peak_price * 0.70 else "未達到"
-            
-            R_10 = "已達到目標價" if current_price >= right_base * 1.0 else "未達到"
-            R_11 = "已達到目標價" if current_price >= right_base * 1.1 else "未達到"
-            R_12 = "已達到目標價" if current_price >= right_base * 1.2 else "未達到"
-
-            st.markdown(f"""
-                <div class="swiss-card">
-                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">
-                        00631L 戰術部署
-                    </div>
-                    
-                    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 4px;">庫存狀態 (上限3次)</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; font-family: monospace;">
-                        {inv_html}
-                    </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; font-family: monospace;">
-                        <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 4px; font-weight: bold; font-size: 11px;">防禦 (左側回撤)</div>
-                        <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 4px; font-weight: bold; font-size: 11px;">進攻 (右側動能)</div>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace; font-size: 11px;">
-                        <!-- 左側 3x2 -->
-                        <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 4px;">
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 0.85</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_85 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{L_85}</div>
-                            
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 0.80</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_80 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{L_80}</div>
-                            
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 0.70</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if L_70 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{L_70}</div>
-                        </div>
-                        <!-- 右側 3x2 -->
-                        <div style="display: grid; grid-template-columns: 3fr 2fr; gap: 4px;">
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">歷史高點</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_10 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{R_10}</div>
-                            
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 1.1</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_11 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{R_11}</div>
-                            
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14;">高點 × 1.2</div>
-                            <div style="background-color: #e4dac6; padding: 4px; border: 1px solid #1f1a14; text-align: center; color: {'#FF6B35' if R_12 == '已達到目標價' else '#1f1a14'}; font-weight: bold;">{R_12}</div>
-                        </div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        # --- C. 00981A 轉倉面板 ---
-        elif sym == "00981A":
-            try: transfer_code = int(float(str(status_dict.get('00981A_轉倉狀態', 0)).replace(',', '')))
-            except: transfer_code = 0
-                
-            status_text = "已觸發清空轉倉" if transfer_code == 1 else "常態佈局中"
-            status_color = "#FF6B35" if transfer_code == 1 else "#7ba23f"
-            
-            st.markdown(f"""
-                <div class="swiss-card">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-weight: bold; font-size: 14px; color: #1f1a14;">00981A 轉倉狀態</span>
-                        <span style="background-color: {status_color}; color: {'#1f1a14' if transfer_code == 1 else '#f0e6d2'}; padding: 4px 8px; font-size: 11px; font-family: monospace; font-weight: bold;">{status_text}</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        # --- D. 其餘衛星部位 (2330 等) ---
-        else:
-            st.markdown(f"""
-                <div class="swiss-card">
-                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">
-                        {sym} // {name_val} 回撤監控
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
-                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
-                            <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br>
-                            <strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong>
-                        </div>
-                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
-                            <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br>
-                            <strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong>
-                        </div>
-                    </div>
-                    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;">
-                        <span>高點回撤幅度</span>
-                        <span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span>
-                    </div>
-                    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;">
-                        <div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-# --- 頁籤三：明日行動 (Action) ---
+# --- 頁籤一：明日行動 (Action) ---
 with tab_action:
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">EXECUTIVE DIRECTIVE</div>', unsafe_allow_html=True)
     
@@ -439,6 +182,191 @@ with tab_action:
                     </div>
                 </div>
             """, unsafe_allow_html=True)
+
+# --- 頁籤二：狀態面板 (Dashboard) ---
+with tab_status:
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
+    
+    # 1. 00631L 專屬戰術部署 (加入總計 3 次上限邏輯與進度顯示)
+    stage_631l_left_raw = status_dict.get('00631L_左側階段', '0')
+    stage_631l_right_raw = status_dict.get('00631L_右側階段', '0')
+    
+    try:
+        left_val = int(float(str(stage_631l_left_raw).replace(',', '')))
+    except:
+        left_val = 0
+        
+    try:
+        right_val = int(float(str(stage_631l_right_raw).replace(',', '')))
+    except:
+        right_val = 0
+
+    total_buys_631l = left_val + right_val
+
+    if total_buys_631l >= 3:
+        status_text_631l = "達佈局上限 (3次)"
+        status_color_631l = "#FFD500" # 黃色警示
+        text_color_631l = "#1f1a14"
+    elif left_val == 0 and right_val == 0:
+        status_text_631l = "常態佈局中"
+        status_color_631l = "#7ba23f"
+        text_color_631l = "#f0e6d2"
+    elif left_val > 0 and right_val == 0:
+        status_text_631l = "觸發：回撤加碼"
+        status_color_631l = "#FF6B35"
+        text_color_631l = "#1f1a14"
+    elif left_val == 0 and right_val > 0:
+        status_text_631l = "觸發：動能追擊"
+        status_color_631l = "#FF6B35"
+        text_color_631l = "#1f1a14"
+    else:
+        status_text_631l = "雙向動態佈局中"
+        status_color_631l = "#FF6B35"
+        text_color_631l = "#1f1a14"
+
+    st.markdown(f"""
+        <div class="swiss-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: bold; font-size: 13px; color: #1f1a14;">
+                    00631L 戰術部署
+                    <span style="font-size: 10px; opacity: 0.6; margin-left: 6px; font-family: monospace;">(庫存: {total_buys_631l}/3)</span>
+                </span>
+                <span style="background-color: {status_color_631l}; color: {text_color_631l}; padding: 4px 8px; font-size: 10px; font-family: monospace; font-weight: bold;">{status_text_631l}</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: monospace;">
+                <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
+                    <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">左側庫存 (回撤加碼)</span><br>
+                    <strong style="font-size: 14px; color: #1f1a14;">Stage {left_val}</strong>
+                </div>
+                <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
+                    <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">右側庫存 (動能追擊)</span><br>
+                    <strong style="font-size: 14px; color: #1f1a14;">Stage {right_val}</strong>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 2. 00981A 專屬轉倉狀態監控
+    transfer_status_981a = status_dict.get('00981A_轉倉狀態', 0)
+    try:
+        transfer_code = int(float(str(transfer_status_981a).replace(',', '')))
+    except:
+        transfer_code = 0
+        
+    status_text = "已觸發清空轉倉" if transfer_code == 1 else "常態佈局中"
+    status_color = "#FF6B35" if transfer_code == 1 else "#7ba23f"
+    
+    st.markdown(f"""
+        <div class="swiss-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: bold; font-size: 13px; color: #1f1a14;">00981A 轉倉狀態</span>
+                <span style="background-color: {status_color}; color: {'#1f1a14' if transfer_code == 1 else '#f0e6d2'}; padding: 4px 8px; font-size: 10px; font-family: monospace; font-weight: bold;">{status_text}</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # 3. 標準回撤監控
+    target_symbols = [sym for sym in price_dict.keys() if sym not in ['00631L', '00981A']]
+    
+    for sym in target_symbols:
+        name_val = ""
+        for _, row in df_market.iterrows():
+            row_sym = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip().replace("'", "")
+            if row_sym == sym:
+                name_val = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
+                break
+        
+        current_price = price_dict.get(sym, 0)
+        
+        peak_val_raw = current_price
+        for k, v in status_dict.items():
+            if sym in k and "最高價" in k:
+                peak_val_raw = v
+                break
+                
+        try:
+            peak_price = float(str(peak_val_raw).replace(',', ''))
+        except:
+            peak_price = current_price
+            
+        if peak_price <= 0 and current_price > 0:
+            peak_price = current_price
+            
+        if peak_price > 0:
+            drawdown_pct = ((current_price - peak_price) / peak_price) * 100
+        else:
+            drawdown_pct = 0.0
+            
+        bar_width = max(0, min(100, 100 + drawdown_pct))
+
+        st.markdown(f"""
+            <div class="swiss-card">
+                <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">
+                    {sym} // {name_val} 回撤監控
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
+                    <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
+                        <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br>
+                        <strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong>
+                    </div>
+                    <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;">
+                        <span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br>
+                        <strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong>
+                    </div>
+                </div>
+                <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;">
+                    <span>高點回撤幅度</span>
+                    <span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span>
+                </div>
+                <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;">
+                    <div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+# --- 頁籤三：報價紀錄 (Quotes) ---
+with tab_market:
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">MARKET DATA BASELINE</div>', unsafe_allow_html=True)
+    
+    if df_market.empty:
+        st.markdown('<div class="swiss-card">尚無歷史報價資料。</div>', unsafe_allow_html=True)
+    else:
+        df_market_clean_date = df_market.iloc[:, 0].astype(str).str.replace("'", "").str.strip()
+        df_latest_market = df_market[df_market_clean_date == latest_market_date]
+        
+        if df_latest_market.empty:
+            st.markdown('<div class="swiss-card">本日尚無報價資料。</div>', unsafe_allow_html=True)
+        else:
+            for index, row in df_latest_market.iterrows():
+                date_m = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).replace("'", "")
+                symbol_m = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
+                name_m = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
+                price_m = str(row.get('收盤價', row.iloc[3] if len(row) > 3 else ""))
+                
+                # 漲跌顏色判定
+                price_color = "#1f1a14"
+                try:
+                    curr_prc = float(price_m.replace(',', ''))
+                    if symbol_m in prev_price_dict:
+                        prev_prc = prev_price_dict[symbol_m]
+                        if curr_prc > prev_prc:
+                            price_color = "#FF6B35" 
+                        elif curr_prc < prev_prc:
+                            price_color = "#7ba23f" 
+                except:
+                    pass
+                
+                st.markdown(f"""
+                    <div class="swiss-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
+                        <div>
+                            <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">{date_m}</span>
+                            <div style="font-weight: bold; font-size: 13px; font-family: monospace; color: #1f1a14;">{symbol_m} // {name_m}</div>
+                        </div>
+                        <div style="font-size: 16px; font-weight: bold; font-family: monospace; color: {price_color};">
+                            {price_m}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
 
 st.markdown("""
     <div style="border-top: 1px solid #1f1a14; margin-top: 20px; padding-top: 10px; display: flex; justify-content: space-between; font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">
