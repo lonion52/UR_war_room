@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. 注入自定義 CSS 
+# 2. 注入自定義 CSS (新增戰術更新按鈕的專屬樣式)
 st.markdown("""
     <style>
         #MainMenu {visibility: hidden;}
@@ -79,6 +79,35 @@ st.markdown("""
             background-color: #1f1a14 !important;
             color: #f0e6d2 !important;
         }
+        
+        /* 🍐 戰術同步按鈕專屬設計 */
+        div[data-testid="stButton"] > button {
+            background-color: #fcf8f2;
+            color: #1f1a14;
+            border: 1px solid #1f1a14;
+            border-radius: 0px;
+            box-shadow: 2px 2px 0px #1f1a14;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 4px 16px;
+            transition: all 0.15s ease;
+        }
+        div[data-testid="stButton"] > button:hover {
+            background-color: #f0e6d2;
+            color: #1f1a14;
+            border: 1px solid #1f1a14;
+        }
+        div[data-testid="stButton"] > button:active {
+            background-color: #FF6B35;
+            color: #1f1a14;
+            box-shadow: 0px 0px 0px #1f1a14;
+            transform: translate(2px, 2px);
+        }
+        div[data-testid="stButton"] > button:focus:not(:active) {
+            border: 1px solid #1f1a14;
+            color: #1f1a14;
+        }
     </style>
 
     <script>
@@ -95,7 +124,7 @@ st.markdown("""
 @st.cache_data(ttl=60)
 def load_data():
     try:
-        # 請在此處填入您真實的 GAS 部署網址
+        # ⚠️ 請在此處填入您真實的 GAS 部署網址
         gas_url = "https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec"
         res_action = requests.get(f"{gas_url}?sheet=Action", allow_redirects=True)
         df_action = pd.read_csv(io.StringIO(res_action.text), dtype=str).fillna("") if res_action.status_code == 200 else pd.DataFrame()
@@ -150,6 +179,12 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
+
+# 🍐 戰術同步按鈕佈局 (放置於頁籤上方，靠右對齊，手機版會自動展開成醒目的大按鈕)
+col_space, col_btn = st.columns([5, 2])
+with col_btn:
+    # 綁定 on_click 直接清空 load_data 的快取，Streamlit 會自動重新整理畫面
+    st.button("🍐 SYNC", on_click=load_data.clear, use_container_width=True)
 
 tab_market, tab_status, tab_action = st.tabs(["Quotes", "Dashboard", "Action"])
 
