@@ -93,7 +93,7 @@ st.markdown("""
 @st.cache_data(ttl=600)
 def load_data():
     try:
-        gas_url = "https://script.google.com/macros/s/AKfycbyZwj4KHu0BmmAfc3w8MOVxe3yh9rELyxUez_pWosUsMFM3IEqg9hK-F2p2BaHGJf5v/exec"
+        gas_url = "https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec"
         
         df_action = pd.read_csv(f"{gas_url}?sheet=Action")
         df_status = pd.read_csv(f"{gas_url}?sheet=State")
