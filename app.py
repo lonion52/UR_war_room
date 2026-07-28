@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import requests
 import io
+import textwrap
 
 st.set_page_config(
     page_title="鋼鐵柚子戰情室",
@@ -159,20 +160,20 @@ if not df_market.empty:
             else: prev_price_dict[sym] = prc_float
         except: pass
 
-st.markdown(f"""
-<div class="fixed-header">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14; opacity: 0.7;">SYSTEM // DUNE EDITION</span>
-            <div class="swiss-title" style="font-size: 18px; color: #1f1a14; margin-top: 2px;">鋼鐵柚子戰情室</div>
-        </div>
-        <div style="text-align: right;">
-            <span style="display: inline-block; width: 8px; height: 8px; background-color: #556B2F; border-radius: 50%;"></span>
-            <div style="font-size: 9px; font-family: monospace; color: #1f1a14; font-weight: bold; margin-top: 2px;">{latest_market_date}</div>
+st.markdown(textwrap.dedent(f"""
+    <div class="fixed-header">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14; opacity: 0.7;">SYSTEM // DUNE EDITION</span>
+                <div class="swiss-title" style="font-size: 18px; color: #1f1a14; margin-top: 2px;">鋼鐵柚子戰情室</div>
+            </div>
+            <div style="text-align: right;">
+                <span style="display: inline-block; width: 8px; height: 8px; background-color: #556B2F; border-radius: 50%;"></span>
+                <div style="font-size: 9px; font-family: monospace; color: #1f1a14; font-weight: bold; margin-top: 2px;">{latest_market_date}</div>
+            </div>
         </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+"""), unsafe_allow_html=True)
 
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
 
@@ -194,7 +195,7 @@ with tab_market:
         else:
             for index, row in df_latest_market.iterrows():
                 date_m = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).replace("'", "")
-                symbol_m = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
+                symbol_m = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).strip().replace("'", "")
                 name_m = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
                 price_m = str(row.get('收盤價', row.iloc[3] if len(row) > 3 else ""))
                 
@@ -216,17 +217,17 @@ with tab_market:
                         elif curr_prc < prev_prc: price_color = "#7ba23f" 
                 except: pass
                 
-                st.markdown(f"""
-<div class="swiss-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
-    <div>
-        <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">{date_m}</span>
-        <div style="font-weight: bold; font-size: 13px; font-family: monospace; color: #1f1a14;">{symbol_m} // {name_m}</div>
-    </div>
-    <div style="font-size: 16px; font-weight: bold; font-family: monospace; color: {price_color}; text-align: right;">
-        {price_m}<br><span style="font-size: 10px; opacity: 0.8;">{change_m}</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+                st.markdown(textwrap.dedent(f"""
+                    <div class="swiss-card" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
+                        <div>
+                            <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">{date_m}</span>
+                            <div style="font-weight: bold; font-size: 13px; font-family: monospace; color: #1f1a14;">{symbol_m} // {name_m}</div>
+                        </div>
+                        <div style="font-size: 16px; font-weight: bold; font-family: monospace; color: {price_color}; text-align: right;">
+                            {price_m}<br><span style="font-size: 10px; opacity: 0.8;">{change_m}</span>
+                        </div>
+                    </div>
+                """), unsafe_allow_html=True)
 
 with tab_status:
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
@@ -259,12 +260,12 @@ with tab_status:
         bar_width = max(0, min(100, 100 + drawdown_pct))
 
         if sym == "^TWII":
-            st.markdown(f"""
-<div class="swiss-card" style="border: 2px solid #1f1a14; background-color: #f0e6d2;">
-    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">大盤天氣預報 // {name_val}</div>
-    <div style="background-color: #fcf8f2; border: 1px solid #1f1a14; padding: 16px; text-align: center; font-family: monospace;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">CURRENT POINT</span><br><strong style="font-size: 26px; color: #1f1a14;">{current_price:,.2f}</strong></div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(textwrap.dedent(f"""
+                <div class="swiss-card" style="border: 2px solid #1f1a14; background-color: #f0e6d2;">
+                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">大盤天氣預報 // {name_val}</div>
+                    <div style="background-color: #fcf8f2; border: 1px solid #1f1a14; padding: 16px; text-align: center; font-family: monospace;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">CURRENT POINT</span><br><strong style="font-size: 26px; color: #1f1a14;">{current_price:,.2f}</strong></div>
+                </div>
+            """), unsafe_allow_html=True)
 
         elif sym == "0050":
             try: stage_0050 = int(float(str(status_dict.get('元大0050_回撤階段', '0'))))
@@ -296,29 +297,29 @@ with tab_status:
                 text_color = "#1f1a14" if s != "空缺" else "#a09a8f"
                 inv_html_50 += f'<div style="background-color: {bg_color}; color: {text_color}; border: 1px solid #1f1a14; text-align: center; padding: 8px; font-weight: bold; font-size: 11px;">{s}</div>'
 
-            st.markdown(f"""
-<div class="swiss-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
-        <div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 回撤監控</div>
-        <div style="background-color: {stage_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STAGE: {stage_0050}</div>
-    </div>
-    
-    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {stage_0050}/3)</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">{inv_html_50}</div>
+            st.markdown(textwrap.dedent(f"""
+                <div class="swiss-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
+                        <div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 回撤監控</div>
+                        <div style="background-color: {stage_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STAGE: {stage_0050}</div>
+                    </div>
+                    
+                    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {stage_0050}/3)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">{inv_html_50}</div>
 
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
-        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
-        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
-    </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace; text-align: center;">
-        <div style="background-color: {bg90}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.9</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s90}</span></div>
-        <div style="background-color: {bg80}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.8</span><br><strong style="font-size: 14px; color: #1f1a14;">{p80:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s80}</span></div>
-        <div style="background-color: {bg70}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.7</span><br><strong style="font-size: 14px; color: #1f1a14;">{p70:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s70}</span></div>
-    </div>
-    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
-    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
-</div>
-""", unsafe_allow_html=True)
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
+                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
+                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace; text-align: center;">
+                        <div style="background-color: {bg90}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.9</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s90}</span></div>
+                        <div style="background-color: {bg80}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.8</span><br><strong style="font-size: 14px; color: #1f1a14;">{p80:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s80}</span></div>
+                        <div style="background-color: {bg70}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.7</span><br><strong style="font-size: 14px; color: #1f1a14;">{p70:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s70}</span></div>
+                    </div>
+                    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
+                    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
+                </div>
+            """), unsafe_allow_html=True)
 
         elif sym == "00631L":
             try: left_val = int(float(str(status_dict.get('00631L_左側階段', '0')).replace(',', '')))
@@ -363,29 +364,29 @@ with tab_status:
             bR11 = "#FF6B35" if R_11 == "已到達" else "#e4dac6"
             bR12 = "#FF6B35" if R_12 == "已到達" else "#e4dac6"
 
-            st.markdown(f"""
-<div class="swiss-card">
-    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">00631L 戰術部署</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">
-        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
-        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
-    </div>
-    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {total_buys_631l}/3)</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; font-family: monospace;">{inv_html}</div>
-    <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px;">防禦 (左側回撤)</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; font-family: monospace; text-align: center;">
-        <div style="background-color: {bL85}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.85</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_85_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{L_85}</span></div>
-        <div style="background-color: {bL80}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.80</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_80_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{L_80}</span></div>
-        <div style="background-color: {bL70}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.70</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_70_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{L_70}</span></div>
-    </div>
-    <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px;">進攻 (右側動能)</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; font-family: monospace; text-align: center;">
-        <div style="background-color: {bR10}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.0</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_10_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{R_10}</span></div>
-        <div style="background-color: {bR11}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.1</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_11_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{R_11}</span></div>
-        <div style="background-color: {bR12}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.2</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_12_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{R_12}</span></div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(textwrap.dedent(f"""
+                <div class="swiss-card">
+                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">00631L 戰術部署</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">
+                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
+                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
+                    </div>
+                    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {total_buys_631l}/3)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; font-family: monospace;">{inv_html}</div>
+                    <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px;">防禦 (左側回撤)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; font-family: monospace; text-align: center;">
+                        <div style="background-color: {bL85}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.85</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_85_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{L_85}</span></div>
+                        <div style="background-color: {bL80}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.80</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_80_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{L_80}</span></div>
+                        <div style="background-color: {bL70}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.70</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_70_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{L_70}</span></div>
+                    </div>
+                    <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px;">進攻 (右側動能)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; font-family: monospace; text-align: center;">
+                        <div style="background-color: {bR10}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.0</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_10_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{R_10}</span></div>
+                        <div style="background-color: {bR11}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.1</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_11_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{R_11}</span></div>
+                        <div style="background-color: {bR12}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.2</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_12_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{R_12}</span></div>
+                    </div>
+                </div>
+            """), unsafe_allow_html=True)
 
         elif sym == "00981A":
             try: transfer_code = int(float(str(status_dict.get('00981A_轉倉狀態', 0)).replace(',', '')))
@@ -395,19 +396,19 @@ with tab_status:
             status_color = "#FF6B35" if transfer_code == 1 else "#7ba23f"
             trans_pct = 100 if transfer_code == 1 else 0
             
-            st.markdown(f"""
-<div class="swiss-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
-        <div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 轉倉狀態</div>
-        <div style="background-color: {status_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STATUS: {transfer_code}</div>
-    </div>
-    <div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace;">
-        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
-    </div>
-    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>轉倉執行進度</span><span style="color: {'#FF6B35' if transfer_code == 1 else '#1f1a14'};">{status_text} ({trans_pct}%)</span></div>
-    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {trans_pct}%; height: 100%; background-color: #FF6B35;"></div></div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(textwrap.dedent(f"""
+                <div class="swiss-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
+                        <div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 轉倉狀態</div>
+                        <div style="background-color: {status_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STATUS: {transfer_code}</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace;">
+                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
+                    </div>
+                    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>轉倉執行進度</span><span style="color: {'#FF6B35' if transfer_code == 1 else '#1f1a14'};">{status_text} ({trans_pct}%)</span></div>
+                    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {trans_pct}%; height: 100%; background-color: #FF6B35;"></div></div>
+                </div>
+            """), unsafe_allow_html=True)
 
         elif sym in ["2330", "3711"]:
             try: stage_sat = int(float(str(status_dict.get(f'{sym}_回撤階段', '0'))))
@@ -435,28 +436,28 @@ with tab_status:
                 text_color = "#1f1a14" if s != "空缺" else "#a09a8f"
                 inv_html += f'<div style="background-color: {bg_color}; color: {text_color}; border: 1px solid #1f1a14; text-align: center; padding: 8px; font-weight: bold; font-size: 12px;">{s}</div>'
 
-            st.markdown(f"""
-<div class="swiss-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
-        <div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 衛星監控</div>
-        <div style="background-color: {stage_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STAGE: {stage_sat}</div>
-    </div>
-    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {stage_sat}/2)</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">{inv_html}</div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
-        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
-        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
-    </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace; text-align: center;">
-        <div style="background-color: {bg90}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.90</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s90}</span></div>
-        <div style="background-color: {bg85}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.85</span><br><strong style="font-size: 14px; color: #1f1a14;">{p85:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s85}</span></div>
-    </div>
-    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
-    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(textwrap.dedent(f"""
+                <div class="swiss-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
+                        <div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 衛星監控</div>
+                        <div style="background-color: {stage_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STAGE: {stage_sat}</div>
+                    </div>
+                    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {stage_sat}/2)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">{inv_html}</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
+                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
+                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace; text-align: center;">
+                        <div style="background-color: {bg90}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.90</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s90}</span></div>
+                        <div style="background-color: {bg85}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.85</span><br><strong style="font-size: 14px; color: #1f1a14;">{p85:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s85}</span></div>
+                    </div>
+                    <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
+                    <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
+                </div>
+            """), unsafe_allow_html=True)
 
-# 📌 Action 分頁：移除 icon，並將標題文字顏色改為亮色 (#f0e6d2) 以適應深色背景
+# 📌 Action 分頁：無 icon、與背景同色系清晰標題
 with tab_action:
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #f0e6d2; padding-left: 8px; margin: 12px 0 8px 0; font-weight: bold; color: #f0e6d2;">本週計畫 (WEEKLY PLAN)</div>', unsafe_allow_html=True)
     
@@ -471,14 +472,14 @@ with tab_action:
             date_val = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).replace("'", "")
             symbol_val = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
             message_val = row.get('內容', row.iloc[4] if len(row) > 4 else "")
-            st.markdown(f"""
-<div class="swiss-card" style="position: relative; background-color: #e4dac6;">
-    <div style="position: absolute; top: 0; right: 0; background-color: #7ba23f; color: #f0e6d2; font-size: 9px; font-family: monospace; padding: 2px 6px; font-weight: bold;">WEEKLY PLAN</div>
-    <span style="font-size: 10px; font-family: monospace; font-weight: bold; color: #1f1a14;">TARGET: {symbol_val}</span>
-    <div style="font-size: 15px; font-weight: bold; margin: 4px 0 8px 0; color: #1f1a14;">{date_val} 發布計畫</div>
-    <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px; white-space: pre-line;">{message_val}</div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(textwrap.dedent(f"""
+                <div class="swiss-card" style="position: relative; background-color: #e4dac6;">
+                    <div style="position: absolute; top: 0; right: 0; background-color: #7ba23f; color: #f0e6d2; font-size: 9px; font-family: monospace; padding: 2px 6px; font-weight: bold;">WEEKLY PLAN</div>
+                    <span style="font-size: 10px; font-family: monospace; font-weight: bold; color: #1f1a14;">TARGET: {symbol_val}</span>
+                    <div style="font-size: 15px; font-weight: bold; margin: 4px 0 8px 0; color: #1f1a14;">{date_val} 發布計畫</div>
+                    <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px; white-space: pre-line;">{message_val}</div>
+                </div>
+            """), unsafe_allow_html=True)
 
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #f0e6d2; padding-left: 8px; margin: 20px 0 8px 0; font-weight: bold; color: #f0e6d2;">今日情況 (TODAY STATUS)</div>', unsafe_allow_html=True)
     
@@ -501,14 +502,14 @@ with tab_action:
                 badge_color = "#4a69bd"
                 symbol_val = "系統健診"
                 
-            st.markdown(f"""
-<div class="swiss-card" style="position: relative;">
-    <div style="position: absolute; top: 0; right: 0; background-color: {badge_color}; color: #1f1a14; font-size: 9px; font-family: monospace; padding: 2px 6px; font-weight: bold;">{category_val} // {action_type}</div>
-    <span style="font-size: 10px; font-family: monospace; font-weight: bold; color: #1f1a14;">TARGET: {symbol_val}</span>
-    <div style="font-size: 15px; font-weight: bold; margin: 4px 0 8px 0; color: #1f1a14;">{date_val} 執行指令</div>
-    <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px; white-space: pre-line;">{message_val}</div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(textwrap.dedent(f"""
+                <div class="swiss-card" style="position: relative;">
+                    <div style="position: absolute; top: 0; right: 0; background-color: {badge_color}; color: #1f1a14; font-size: 9px; font-family: monospace; padding: 2px 6px; font-weight: bold;">{category_val} // {action_type}</div>
+                    <span style="font-size: 10px; font-family: monospace; font-weight: bold; color: #1f1a14;">TARGET: {symbol_val}</span>
+                    <div style="font-size: 15px; font-weight: bold; margin: 4px 0 8px 0; color: #1f1a14;">{date_val} 執行指令</div>
+                    <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px; white-space: pre-line;">{message_val}</div>
+                </div>
+            """), unsafe_allow_html=True)
 
 st.markdown("""
     <div style="border-top: 1px solid #1f1a14; margin-top: 20px; padding-top: 10px; display: flex; justify-content: space-between; font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">
