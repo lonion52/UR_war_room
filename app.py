@@ -321,11 +321,20 @@ with tab_status:
             try: transfer_code = int(float(str(status_dict.get('00981A_轉倉狀態', 0)).replace(',', '')))
             except: transfer_code = 0
             
-            status_text = "已觸發清空轉倉" if transfer_code == 1 else "常態佈局中"
-            status_color = "#FF6B35" if transfer_code == 1 else "#7ba23f"
-            trans_pct = 100 if transfer_code == 1 else 0
+            # 💡 戰術狀態設計：以視覺化狀態燈號取代進度條
+            is_triggered = (transfer_code == 1)
+            status_text = "已觸發重大轉倉 (ALERT)" if is_triggered else "常態佈局中 (NORM)"
+            status_color = "#FF6B35" if is_triggered else "#7ba23f"
+            card_bg = "#fceee9" if is_triggered else "#fcf8f2"
             
-            st.markdown(f"""<div class="swiss-card"><div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;"><div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 轉倉狀態</div><div style="background-color: {status_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STATUS: {transfer_code}</div></div><div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace;"><div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div></div><div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>轉倉執行進度</span><span style="color: {'#FF6B35' if transfer_code == 1 else '#1f1a14'};">{status_text} ({trans_pct}%)</span></div><div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {trans_pct}%; height: 100%; background-color: #FF6B35;"></div></div></div>""", unsafe_allow_html=True)
+            desc_text = (
+                "⚠️ 0050 回撤已達 15% 防線！<br>"
+                "<b>執行指令：</b>清空 00981A，變現 50% 轉買 00631L，其餘保留左側分批。"
+                if is_triggered else 
+                "0050 高點回撤幅度在 15% 以內，維持 00981A 常態定期定額佈局。"
+            )
+
+            st.markdown(f"""<div class="swiss-card" style="background-color: {card_bg};"><div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;"><div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 轉倉狀態</div><div style="background-color: {status_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STATUS: {transfer_code}</div></div><div style="display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;"><div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div></div><div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>當前狀態指令</span><span style="color: {status_color}; font-weight: bold;">{status_text}</span></div><div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 11px; margin-top: 8px; line-height: 1.4;">{desc_text}</div></div>""", unsafe_allow_html=True)
 
         elif sym in ["2330", "3711"]:
             try: stage_sat = int(float(str(status_dict.get(f'{sym}_回撤階段', '0'))))
