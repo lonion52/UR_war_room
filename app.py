@@ -160,18 +160,18 @@ if not df_market.empty:
         except: pass
 
 st.markdown(f"""
-    <div class="fixed-header">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14; opacity: 0.7;">SYSTEM // DUNE EDITION</span>
-                <div class="swiss-title" style="font-size: 18px; color: #1f1a14; margin-top: 2px;">鋼鐵柚子戰情室</div>
-            </div>
-            <div style="text-align: right;">
-                <span style="display: inline-block; width: 8px; height: 8px; background-color: #556B2F; border-radius: 50%;"></span>
-                <div style="font-size: 9px; font-family: monospace; color: #1f1a14; font-weight: bold; margin-top: 2px;">{latest_market_date}</div>
-            </div>
+<div class="fixed-header">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <span style="font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14; opacity: 0.7;">SYSTEM // DUNE EDITION</span>
+            <div class="swiss-title" style="font-size: 18px; color: #1f1a14; margin-top: 2px;">鋼鐵柚子戰情室</div>
+        </div>
+        <div style="text-align: right;">
+            <span style="display: inline-block; width: 8px; height: 8px; background-color: #556B2F; border-radius: 50%;"></span>
+            <div style="font-size: 9px; font-family: monospace; color: #1f1a14; font-weight: bold; margin-top: 2px;">{latest_market_date}</div>
         </div>
     </div>
+</div>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="main-container">', unsafe_allow_html=True)
@@ -226,7 +226,7 @@ with tab_market:
         {price_m}<br><span style="font-size: 10px; opacity: 0.8;">{change_m}</span>
     </div>
 </div>
-                """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 with tab_status:
     st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">TACTICAL MONITOR & RISK</div>', unsafe_allow_html=True)
@@ -264,7 +264,7 @@ with tab_status:
     <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">大盤天氣預報 // {name_val}</div>
     <div style="background-color: #fcf8f2; border: 1px solid #1f1a14; padding: 16px; text-align: center; font-family: monospace;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">CURRENT POINT</span><br><strong style="font-size: 26px; color: #1f1a14;">{current_price:,.2f}</strong></div>
 </div>
-            """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
         elif sym == "0050":
             try: stage_0050 = int(float(str(status_dict.get('元大0050_回撤階段', '0'))))
@@ -283,7 +283,6 @@ with tab_status:
             
             stage_color = "#FF6B35" if stage_0050 > 0 else "#7ba23f"
             
-            # 📌 0050 庫存狀態 (上限 3)
             inv_slots_50 = []
             if stage_0050 >= 1: inv_slots_50.append("回撤加碼 (-10%)")
             if stage_0050 >= 2: inv_slots_50.append("回撤加碼 (-20%)")
@@ -319,7 +318,7 @@ with tab_status:
     <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
     <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
 </div>
-            """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
         elif sym == "00631L":
             try: left_val = int(float(str(status_dict.get('00631L_左側階段', '0')).replace(',', '')))
@@ -386,7 +385,7 @@ with tab_status:
         <div style="background-color: {bR12}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.2</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_12_price:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{R_12}</span></div>
     </div>
 </div>
-            """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
         elif sym == "00981A":
             try: transfer_code = int(float(str(status_dict.get('00981A_轉倉狀態', 0)).replace(',', '')))
@@ -408,7 +407,7 @@ with tab_status:
     <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>轉倉執行進度</span><span style="color: {'#FF6B35' if transfer_code == 1 else '#1f1a14'};">{status_text} ({trans_pct}%)</span></div>
     <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {trans_pct}%; height: 100%; background-color: #FF6B35;"></div></div>
 </div>
-            """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
         elif sym in ["2330", "3711"]:
             try: stage_sat = int(float(str(status_dict.get(f'{sym}_回撤階段', '0'))))
@@ -436,7 +435,6 @@ with tab_status:
                 text_color = "#1f1a14" if s != "空缺" else "#a09a8f"
                 inv_html += f'<div style="background-color: {bg_color}; color: {text_color}; border: 1px solid #1f1a14; text-align: center; padding: 8px; font-weight: bold; font-size: 12px;">{s}</div>'
 
-            # 📌 2330 / 3711 拿掉百分比標籤
             st.markdown(f"""
 <div class="swiss-card">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
@@ -456,11 +454,11 @@ with tab_status:
     <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
     <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
 </div>
-            """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-# 📌 Action 分頁：上下拆分「本週計畫」與「今日情況」
+# 📌 Action 分頁：移除 icon，並將標題文字顏色改為亮色 (#f0e6d2) 以適應深色背景
 with tab_action:
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0 8px 0; font-weight: bold; color: #1f1a14;">📅 本週計畫 (WEEKLY PLAN)</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #f0e6d2; padding-left: 8px; margin: 12px 0 8px 0; font-weight: bold; color: #f0e6d2;">本週計畫 (WEEKLY PLAN)</div>', unsafe_allow_html=True)
     
     df_plan = pd.DataFrame()
     if not df_action.empty:
@@ -480,9 +478,9 @@ with tab_action:
     <div style="font-size: 15px; font-weight: bold; margin: 4px 0 8px 0; color: #1f1a14;">{date_val} 發布計畫</div>
     <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px; white-space: pre-line;">{message_val}</div>
 </div>
-            """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 20px 0 8px 0; font-weight: bold; color: #1f1a14;">⚡ 今日情況 (TODAY STATUS)</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #f0e6d2; padding-left: 8px; margin: 20px 0 8px 0; font-weight: bold; color: #f0e6d2;">今日情況 (TODAY STATUS)</div>', unsafe_allow_html=True)
     
     df_today = pd.DataFrame()
     if not df_action.empty:
@@ -510,7 +508,7 @@ with tab_action:
     <div style="font-size: 15px; font-weight: bold; margin: 4px 0 8px 0; color: #1f1a14;">{date_val} 執行指令</div>
     <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px; white-space: pre-line;">{message_val}</div>
 </div>
-            """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 st.markdown("""
     <div style="border-top: 1px solid #1f1a14; margin-top: 20px; padding-top: 10px; display: flex; justify-content: space-between; font-size: 9px; font-family: monospace; font-weight: bold; color: #1f1a14;">
