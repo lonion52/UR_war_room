@@ -3,7 +3,6 @@ import pandas as pd
 import requests
 import io
 
-# 1. 頁面基本設定
 st.set_page_config(
     page_title="鋼鐵柚子戰情室",
     page_icon="🍐",
@@ -11,7 +10,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 2. 注入自定義 CSS 
 st.markdown("""
     <style>
         #MainMenu {visibility: hidden;}
@@ -80,7 +78,6 @@ st.markdown("""
             color: #f0e6d2 !important;
         }
         
-        /* 🍐 戰術同步按鈕專屬設計 */
         div[data-testid="stButton"] > button {
             background-color: #fcf8f2;
             color: #1f1a14;
@@ -120,7 +117,6 @@ st.markdown("""
     </script>
 """, unsafe_allow_html=True)
 
-# 3. 讀取 Google 試算表資料的函數
 @st.cache_data(ttl=60)
 def load_data():
     try:
@@ -287,12 +283,30 @@ with tab_status:
             
             stage_color = "#FF6B35" if stage_0050 > 0 else "#7ba23f"
             
+            # 📌 0050 庫存狀態 (上限 3)
+            inv_slots_50 = []
+            if stage_0050 >= 1: inv_slots_50.append("回撤加碼 (-10%)")
+            if stage_0050 >= 2: inv_slots_50.append("回撤加碼 (-20%)")
+            if stage_0050 >= 3: inv_slots_50.append("回撤加碼 (-30%)")
+            while len(inv_slots_50) < 3: inv_slots_50.append("空缺")
+            inv_slots_50 = inv_slots_50[:3]
+            
+            inv_html_50 = ""
+            for s in inv_slots_50:
+                bg_color = "#FF6B35" if s != "空缺" else "#e4dac6"
+                text_color = "#1f1a14" if s != "空缺" else "#a09a8f"
+                inv_html_50 += f'<div style="background-color: {bg_color}; color: {text_color}; border: 1px solid #1f1a14; text-align: center; padding: 8px; font-weight: bold; font-size: 11px;">{s}</div>'
+
             st.markdown(f"""
 <div class="swiss-card">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
         <div style="font-weight: bold; font-size: 14px; color: #1f1a14;">{sym} // {name_val} 回撤監控</div>
         <div style="background-color: {stage_color}; color: #f0e6d2; font-size: 10px; padding: 2px 6px; font-weight: bold; font-family: monospace;">STAGE: {stage_0050}</div>
     </div>
+    
+    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {stage_0050}/3)</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">{inv_html_50}</div>
+
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; font-family: monospace;">
         <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
         <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
@@ -422,6 +436,7 @@ with tab_status:
                 text_color = "#1f1a14" if s != "空缺" else "#a09a8f"
                 inv_html += f'<div style="background-color: {bg_color}; color: {text_color}; border: 1px solid #1f1a14; text-align: center; padding: 8px; font-weight: bold; font-size: 12px;">{s}</div>'
 
+            # 📌 2330 / 3711 拿掉百分比標籤
             st.markdown(f"""
 <div class="swiss-card">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1f1a14; margin-bottom: 10px; padding-bottom: 4px;">
@@ -435,29 +450,59 @@ with tab_status:
         <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
     </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace; text-align: center;">
-        <div style="background-color: {bg90}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.90 (-10%)</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s90}</span></div>
-        <div style="background-color: {bg85}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.85 (-15%)</span><br><strong style="font-size: 14px; color: #1f1a14;">{p85:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s85}</span></div>
+        <div style="background-color: {bg90}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.90</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s90}</span></div>
+        <div style="background-color: {bg85}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.85</span><br><strong style="font-size: 14px; color: #1f1a14;">{p85:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s85}</span></div>
     </div>
     <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
     <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
 </div>
             """, unsafe_allow_html=True)
 
+# 📌 Action 分頁：上下拆分「本週計畫」與「今日情況」
 with tab_action:
-    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0; font-weight: bold; color: #1f1a14;">EXECUTIVE DIRECTIVE</div>', unsafe_allow_html=True)
-    if df_action.empty:
-        st.markdown('<div class="swiss-card">今日無待執行指令或尚無資料。</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 12px 0 8px 0; font-weight: bold; color: #1f1a14;">📅 本週計畫 (WEEKLY PLAN)</div>', unsafe_allow_html=True)
+    
+    df_plan = pd.DataFrame()
+    if not df_action.empty:
+        df_plan = df_action[df_action.iloc[:, 2].astype(str).str.contains("本週計畫", case=False, na=False)]
+    
+    if df_plan.empty:
+        st.markdown('<div class="swiss-card">本週尚無登錄的計畫（每週一自動更新）。</div>', unsafe_allow_html=True)
     else:
-        for index, row in df_action.iterrows():
+        for _, row in df_plan.tail(1).iterrows():
+            date_val = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).replace("'", "")
+            symbol_val = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
+            message_val = row.get('內容', row.iloc[4] if len(row) > 4 else "")
+            st.markdown(f"""
+<div class="swiss-card" style="position: relative; background-color: #e4dac6;">
+    <div style="position: absolute; top: 0; right: 0; background-color: #7ba23f; color: #f0e6d2; font-size: 9px; font-family: monospace; padding: 2px 6px; font-weight: bold;">WEEKLY PLAN</div>
+    <span style="font-size: 10px; font-family: monospace; font-weight: bold; color: #1f1a14;">TARGET: {symbol_val}</span>
+    <div style="font-size: 15px; font-weight: bold; margin: 4px 0 8px 0; color: #1f1a14;">{date_val} 發布計畫</div>
+    <div style="background-color: #1f1a14; color: #f0e6d2; padding: 10px; font-family: monospace; font-size: 12px; margin-bottom: 8px; white-space: pre-line;">{message_val}</div>
+</div>
+            """, unsafe_allow_html=True)
+
+    st.markdown('<div style="font-size: 11px; font-family: monospace; border-left: 2px solid #1f1a14; padding-left: 8px; margin: 20px 0 8px 0; font-weight: bold; color: #1f1a14;">⚡ 今日情況 (TODAY STATUS)</div>', unsafe_allow_html=True)
+    
+    df_today = pd.DataFrame()
+    if not df_action.empty:
+        df_today = df_action[df_action.iloc[:, 0].astype(str).str.replace("'", "").str.strip() == latest_market_date]
+    
+    if df_today.empty:
+        st.markdown('<div class="swiss-card">今日無觸發的戰術指令。</div>', unsafe_allow_html=True)
+    else:
+        for _, row in df_today.iterrows():
             date_val = str(row.get('日期', row.iloc[0] if len(row) > 0 else "")).replace("'", "")
             symbol_val = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
             category_val = row.get('類別', row.iloc[2] if len(row) > 2 else "")
             action_type = row.get('動作', row.iloc[3] if len(row) > 3 else "BUY")
             message_val = row.get('內容', row.iloc[4] if len(row) > 4 else "")
+            
             badge_color = "#FF6B35" if "BUY" in str(action_type).upper() else "#FFD500" if "SELL" in str(action_type).upper() else "#7ba23f"
             if symbol_val == "PORTFOLIO" or action_type == "CHECK":
                 badge_color = "#4a69bd"
                 symbol_val = "系統健診"
+                
             st.markdown(f"""
 <div class="swiss-card" style="position: relative;">
     <div style="position: absolute; top: 0; right: 0; background-color: {badge_color}; color: #1f1a14; font-size: 9px; font-family: monospace; padding: 2px 6px; font-weight: bold;">{category_val} // {action_type}</div>
