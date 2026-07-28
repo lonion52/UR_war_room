@@ -124,7 +124,7 @@ st.markdown("""
 @st.cache_data(ttl=60)
 def load_data():
     try:
-        # ⚠️ 請確保這裡是正確的 GAS Web App 網址
+        # ⚠️ 記得替換成你的真實 GAS 網址
         gas_url = "https://script.google.com/macros/s/AKfycbxf0xiDNHzoJXBI5ZIoUfeijjPuTtpxh2BwG_NPYOqpTFrkD5_jAy72U9xeEHl5YH0U/exec"
         res_action = requests.get(f"{gas_url}?sheet=Action", allow_redirects=True)
         df_action = pd.read_csv(io.StringIO(res_action.text), dtype=str).fillna("") if res_action.status_code == 200 else pd.DataFrame()
@@ -201,8 +201,16 @@ with tab_market:
                 symbol_m = str(row.get('股票代號', row.iloc[1] if len(row) > 1 else "")).replace("'", "")
                 name_m = str(row.get('股票名稱', row.iloc[2] if len(row) > 2 else ""))
                 price_m = str(row.get('收盤價', row.iloc[3] if len(row) > 3 else ""))
+                
+                # 修正漲跌幅：處理小數點 (-0.0465) 轉換為百分比
                 change_m = str(row.get('漲跌', str(row.get('漲跌幅', row.iloc[4] if len(row) > 4 else ""))))
-                if change_m == "nan" or change_m == "休市" or change_m == "停牌/無資料": change_m = ""
+                if change_m == "nan" or change_m == "休市" or change_m == "停牌/無資料": 
+                    change_m = ""
+                elif change_m and "%" not in change_m:
+                    try:
+                        change_val = float(change_m)
+                        change_m = f"{change_val * 100:+.2f}%"
+                    except: pass
                 
                 price_color = "#1f1a14" 
                 try:
@@ -274,6 +282,11 @@ with tab_status:
             s80 = "已到達" if current_price <= p80 else "未到達"
             s70 = "已到達" if current_price <= p70 else "未到達"
             
+            # 修正已到達顏色：背景亮橘，字體全黑
+            bg90 = "#FF6B35" if s90 == "已到達" else "#e4dac6"
+            bg80 = "#FF6B35" if s80 == "已到達" else "#e4dac6"
+            bg70 = "#FF6B35" if s70 == "已到達" else "#e4dac6"
+            
             stage_color = "#FF6B35" if stage_0050 > 0 else "#7ba23f"
             
             st.markdown(f"""
@@ -287,9 +300,9 @@ with tab_status:
                         <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace; text-align: center;">
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.9</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: {'#FF6B35' if s90 == '已到達' else '#1f1a14'};">{s90}</span></div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.8</span><br><strong style="font-size: 14px; color: #1f1a14;">{p80:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: {'#FF6B35' if s80 == '已到達' else '#1f1a14'};">{s80}</span></div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.7</span><br><strong style="font-size: 14px; color: #1f1a14;">{p70:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: {'#FF6B35' if s70 == '已到達' else '#1f1a14'};">{s70}</span></div>
+                        <div style="background-color: {bg90}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.9</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s90}</span></div>
+                        <div style="background-color: {bg80}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.8</span><br><strong style="font-size: 14px; color: #1f1a14;">{p80:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s80}</span></div>
+                        <div style="background-color: {bg70}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.7</span><br><strong style="font-size: 14px; color: #1f1a14;">{p70:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s70}</span></div>
                     </div>
                     <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
                     <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
@@ -305,6 +318,9 @@ with tab_status:
             s90 = "已到達" if current_price <= p90 else "未到達"
             s85 = "已到達" if current_price <= p85 else "未到達"
             
+            bg90 = "#FF6B35" if s90 == "已到達" else "#e4dac6"
+            bg85 = "#FF6B35" if s85 == "已到達" else "#e4dac6"
+            
             stage_color = "#FF6B35" if stage_sat > 0 else "#7ba23f"
 
             st.markdown(f"""
@@ -318,8 +334,8 @@ with tab_status:
                         <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; font-family: monospace; text-align: center;">
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.90 (-10%)</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: {'#FF6B35' if s90 == '已到達' else '#1f1a14'};">{s90}</span></div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.85 (-15%)</span><br><strong style="font-size: 14px; color: #1f1a14;">{p85:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: {'#FF6B35' if s85 == '已到達' else '#1f1a14'};">{s85}</span></div>
+                        <div style="background-color: {bg90}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.90 (-10%)</span><br><strong style="font-size: 14px; color: #1f1a14;">{p90:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s90}</span></div>
+                        <div style="background-color: {bg85}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">最高價 × 0.85 (-15%)</span><br><strong style="font-size: 14px; color: #1f1a14;">{p85:.2f}</strong><br><span style="font-size: 12px; font-weight: bold; color: #1f1a14;">{s85}</span></div>
                     </div>
                     <div style="font-size: 11px; font-family: monospace; font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between;"><span>高點回撤幅度</span><span style="color: {'#FF6B35' if drawdown_pct < -5 else '#1f1a14'};">{drawdown_pct:.2f}%</span></div>
                     <div style="width: 100%; height: 8px; background-color: #e4dac6; border: 1px solid #1f1a14; overflow: hidden;"><div style="width: {bar_width}%; height: 100%; background-color: #1f1a14;"></div></div>
@@ -362,32 +378,36 @@ with tab_status:
             R_11 = "已到達" if current_price >= R_11_price else "未到達"
             R_12 = "已到達" if current_price >= R_12_price else "未到達"
 
-            st.markdown(f"""
-                <div class="swiss-card">
-                    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">00631L 戰術部署</div>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">
-                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
-                        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
-                    </div>
+            bL85 = "#FF6B35" if L_85 == "已到達" else "#e4dac6"
+            bL80 = "#FF6B35" if L_80 == "已到達" else "#e4dac6"
+            bL70 = "#FF6B35" if L_70 == "已到達" else "#e4dac6"
+            bR10 = "#FF6B35" if R_10 == "已到達" else "#e4dac6"
+            bR11 = "#FF6B35" if R_11 == "已到達" else "#e4dac6"
+            bR12 = "#FF6B35" if R_12 == "已到達" else "#e4dac6"
 
-                    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {total_buys_631l}/3)</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; font-family: monospace;">{inv_html}</div>
-                    
-                    <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px;">防禦 (左側回撤)</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; font-family: monospace; text-align: center;">
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.85</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_85_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: {'#FF6B35' if L_85 == '已到達' else '#1f1a14'};">{L_85}</span></div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.80</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_80_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: {'#FF6B35' if L_80 == '已到達' else '#1f1a14'};">{L_80}</span></div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.70</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_70_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: {'#FF6B35' if L_70 == '已到達' else '#1f1a14'};">{L_70}</span></div>
-                    </div>
-                    
-                    <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px;">進攻 (右側動能)</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; font-family: monospace; text-align: center;">
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.0</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_10_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: {'#FF6B35' if R_10 == '已到達' else '#1f1a14'};">{R_10}</span></div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.1</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_11_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: {'#FF6B35' if R_11 == '已到達' else '#1f1a14'};">{R_11}</span></div>
-                        <div style="background-color: #e4dac6; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.2</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_12_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: {'#FF6B35' if R_12 == '已到達' else '#1f1a14'};">{R_12}</span></div>
-                    </div>
-                </div>
+            # 修正：移除多餘換行，包裝為單一緊密的 HTML 區塊，防止 Streamlit 解析器失控
+            st.markdown(f"""
+<div class="swiss-card">
+    <div style="font-weight: bold; font-size: 14px; margin-bottom: 10px; color: #1f1a14; border-bottom: 1px solid #1f1a14; padding-bottom: 4px;">00631L 戰術部署</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; font-family: monospace;">
+        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">CURRENT PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{current_price}</strong></div>
+        <div style="background-color: #f0e6d2; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 9px; font-weight: bold; opacity: 0.7;">PEAK PRICE</span><br><strong style="font-size: 15px; color: #1f1a14;">{peak_price}</strong></div>
+    </div>
+    <div style="font-size: 11px; font-weight: bold; font-family: monospace; margin-bottom: 6px;">庫存狀態 (進度 {total_buys_631l}/3)</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; font-family: monospace;">{inv_html}</div>
+    <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px;">防禦 (左側回撤)</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; font-family: monospace; text-align: center;">
+        <div style="background-color: {bL85}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.85</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_85_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: #1f1a14;">{L_85}</span></div>
+        <div style="background-color: {bL80}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.80</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_80_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: #1f1a14;">{L_80}</span></div>
+        <div style="background-color: {bL70}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">高點 × 0.70</span><br><strong style="font-size: 14px; color: #1f1a14;">{L_70_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: #1f1a14;">{L_70}</span></div>
+    </div>
+    <div style="background-color: #1f1a14; color: #f0e6d2; text-align: center; padding: 6px; font-weight: bold; font-size: 12px; margin-bottom: 8px;">進攻 (右側動能)</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; font-family: monospace; text-align: center;">
+        <div style="background-color: {bR10}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.0</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_10_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: #1f1a14;">{R_10}</span></div>
+        <div style="background-color: {bR11}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.1</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_11_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: #1f1a14;">{R_11}</span></div>
+        <div style="background-color: {bR12}; border: 1px solid #1f1a14; padding: 8px;"><span style="font-size: 11px; font-weight: bold; opacity: 0.7;">基準點 × 1.2</span><br><strong style="font-size: 14px; color: #1f1a14;">{R_12_price:.2f}</strong><br><span style="font-size: 11px; font-weight: bold; color: #1f1a14;">{R_12}</span></div>
+    </div>
+</div>
             """, unsafe_allow_html=True)
 
         elif sym == "00981A":
